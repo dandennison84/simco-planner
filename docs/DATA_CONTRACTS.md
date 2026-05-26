@@ -17,6 +17,7 @@ These are the only surfaces the system guarantees.
 | financial_snapshot | Accounting results | snapshot_key | snapshot_key | Accounting truth |
 | structure_map | Physical and organizational structure | structure_key + slot_key | structure_key, slot_key | Declared structure |
 | slot_product_assignment | Explicit assignment of capacity to products | slot_key + product_key + quality_level | slot_key, product_key, quality_level | Explicit assignment |
+| sales_demand | channel_key-specific demand for products | product_key + channel_key | product_key, channel_key | Derived / scenario input |
 
 
 ---
