@@ -17,7 +17,7 @@ CASE_INPUT_DIRNAME = "input"
 CASE_REFERENCE_DIRNAME = "reference"
 CASE_EXPECTED_DIRNAME = "expected"
 
-REPO_DATA_DIRNAME = "data"
+REPO_DATA_DIRNAME = "data" / "test"
 REPO_INPUT_DIRNAME = "input"
 REPO_REFERENCE_DIRNAME = "reference"
 REPO_OUTPUT_DIRNAME = "output"
