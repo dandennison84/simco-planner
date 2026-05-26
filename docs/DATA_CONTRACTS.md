@@ -1,68 +1,97 @@
 # Data Contracts
 
-## Purpose
+## Overview
 
-Define the external data interfaces of the system.
+The engine operates on a fixed set of tables.
 
-These are the only surfaces the system guarantees.
-
-
----
-
-## Input Surfaces
-
-| Name | Description | Grain | Keys | Authority |
-|------|------------|------|------|----------|
-| company_snapshot | Observed company context and modifiers | snapshot_key | snapshot_key | Observed truth |
-| financial_snapshot | Accounting results | snapshot_key | snapshot_key | Accounting truth |
-| structure_map | Physical and organizational structure | structure_key + slot_key | structure_key, slot_key | Declared structure |
-| slot_product_assignment | Explicit assignment of capacity to products | slot_key + product_key + quality_level | slot_key, product_key, quality_level | Explicit assignment |
-| sales_demand | channel_key-specific demand for products | product_key + channel_key | product_key, channel_key | Derived / scenario input |
+Each table is represented as a single CSV file and forms the input/output contract boundary.
 
 
----
+## Table Surfaces
 
-## Reference Surfaces
+### Input Tables
 
-| Name | Description | Grain | Keys | Authority |
-|------|------------|------|------|----------|
-| market_pricing | Observed market prices | realm_key + product_key + quality_level | realm_key, product_key, quality_level | Market observation |
-| product_bom | Product input relationships | product_key + input_product_key | product_key, input_product_key | World rules |
-| system_parameters | Engine defaults and policies | parameter | parameter | Engine configuration |
+- company_snapshot
+- structure_map
+- slot_product_assignment
+- sales_demand
+- financial_snapshot
 
+### Reference Tables
 
----
+- product_bom
+- market_pricing
 
-## Output Surfaces
+### System Tables
 
-| Name | Description | Grain | Keys | Authority |
-|------|------------|------|------|----------|
-| diagnostics | Derived signals and system state | snapshot_key + signal_code | snapshot_key, signal_code | Engine-derived |
-| guidance | Attention cues derived from signals | snapshot_key + signal_code | snapshot_key, signal_code | Signal synthesis |
-| signal_evidence | Full evaluation-level signal output | snapshot_key + product_key + quality_level + sales_channel_key + signal_code | snapshot_key + context + signal_code | Raw evaluation |
-| map_health_view | Tool-specific projection of diagnostics | snapshot_key | snapshot_key | Presentation only |
+- system_parameters
 
 
----
+## Data Environments
 
-## Rules
+Runtime:
 
-- Surface names must be semantic and implementation-agnostic
-- Tool-specific naming is only allowed for presentation surfaces (e.g., map_health_view)
-- Names must not encode system roles (input, ref, output)
-- Names must not reference specific tools unless they are tool views
-- Grain and keys must be explicitly defined
-- All inputs must be explicit and complete
-- Outputs must be final and fully resolved
-- Internal pipeline artifacts must not appear here
+- data/runtime/input/
+- data/runtime/reference/
+- data/runtime/output/
+
+Test:
+
+- data/test/input/
+- data/test/reference/
+- data/test/output/
+
+Test data MUST NOT interfere with runtime data.
 
 
----
+## File Rules
 
-## Summary
+- One file per table
+- File name == table name
+- CSV format only
+- Headers must match exactly (case + whitespace)
+- No implicit columns
+- No system metadata columns
 
-Data contracts define the system boundary.
 
-They are the only stable interface between:
-- engine internals
-- user-visible outputs
+## Table Loading Behavior
+
+- Table names are defined in the engine
+- Missing files are loaded as empty tables
+- Validator determines if empty is acceptable
+
+
+## Schema Integration (Current State)
+
+- Schema is defined in: schema/schema.yml
+- Schema is applied AFTER CSV ingestion
+- Schema validates structure only
+- Schema does NOT define table existence (yet)
+
+
+## Responsibilities
+
+User (Excel):
+- provides input values only
+
+CSV:
+- transport layer
+
+Schema:
+- defines structure
+
+Validator:
+- enforces rules
+
+Pipeline:
+- applies business logic
+
+
+## Observability
+
+Every engine run must report:
+
+- rows read per table
+- total tables processed
+
+The engine must never run silently.

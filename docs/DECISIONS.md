@@ -44,6 +44,14 @@ Rules:
 |21 | Layer Model | Existing model is strong | Already enforces correctness | Keep full layer model |
 |22 | Documentation Role | Docs tied to implementation | Limits flexibility | Docs define invariants only |
 |23 | Implementation Independence | Language coupling limits portability | System should outlive tooling | Remove implementation-specific language |
+|24 | Runtime Isolation | Test data interfered with runtime behavior | Needed separation without changing engine logic | Separate runtime and test data directories |
+|25 | CSV Contract Boundary | Considered reading Excel directly | Engine must remain deterministic and UI-independent | CSV is the sole contract boundary |
+|26 | Validator Layer | No clear data validation boundary | Pipeline must remain pure logic | Add schema-driven validator before pipeline |
+|27 | Schema Ownership | Unclear whether user or system defines structure | User experience must remain simple | Schema owned by system, not input tables |
+|28 | Schema Versioning | Considered embedding version in CSV data | Would complicate user input and pollute tables | Versioning exists only in schema, not CSV |
+|29 | Observability | Engine execution was silent | No signal of data consumption | Always emit table-level run summaries |
+|30 | Schema Scope | Considered schema defining table presence | Schema not yet mature | Keep table surfaces defined in engine for now |
+|31 | User Responsibility | Users potentially managing system metadata | Creates unnecessary complexity | Users only provide business data, no system fields |
 
 ---
 
@@ -51,6 +59,6 @@ Rules:
 
 | # | Topic | Problem | Key Points | Decision |
 |---|------|--------|-----------|----------|
-|24 | Source of Truth | Conversations are not persistent | Risk of drift | Repository docs are authoritative |
-|25 | Decision Tracking | Decisions get lost | Need continuity | Maintain decisions log |
-|26 | Execution Independence | System tied to tooling | Limits evolution | Define system independent of runtime |
+|32 | Source of Truth | Conversations are not persistent | Risk of drift | Repository docs are authoritative |
+|33 | Decision Tracking | Decisions get lost | Need continuity | Maintain decisions log |
+|34 | Execution Independence | System tied to tooling | Limits evolution | Define system independent of runtime |
