@@ -216,3 +216,15 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Excel temporary files (critical)
+~$*
+
+# Excel auto-recovery / backups (optional, safe)
+*.xlk
+*.tmp
+*.bak
+
+# Generated Excel outputs
+/reports/*.xlsx
+/data/output/**/*.xlsx
