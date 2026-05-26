@@ -11,7 +11,11 @@ from engine.validator import validate_table
 def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
 
-    data_dir = repo_root / "data" / "runtime"
+    import os
+
+    env = os.getenv("SIMCO_ENV", "runtime")
+    data_dir = repo_root / "data" / env
+
     input_dir = data_dir / "input"
     reference_dir = data_dir / "reference"
     output_dir = data_dir / "output"

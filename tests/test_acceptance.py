@@ -17,7 +17,7 @@ CASE_INPUT_DIRNAME = "input"
 CASE_REFERENCE_DIRNAME = "reference"
 CASE_EXPECTED_DIRNAME = "expected"
 
-REPO_DATA_DIRNAME = "data" / "test"
+REPO_DATA_DIRNAME = "data/test"
 REPO_INPUT_DIRNAME = "input"
 REPO_REFERENCE_DIRNAME = "reference"
 REPO_OUTPUT_DIRNAME = "output"
@@ -189,6 +189,9 @@ def test_acceptance_case(case: CasePaths) -> None:
 
     # Execute engine
     try:
+        import os
+        os.environ["SIMCO_ENV"] = "test"
+
         rc = run_engine()
 
         if should_fail:

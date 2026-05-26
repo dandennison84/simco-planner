@@ -1,1 +1,40 @@
-tables: {}
+tables:
+
+  company_snapshot:
+    version: 1
+    intent: "Defines scenario identity, context, and global modifiers for the engine"
+
+    fields:
+
+      snapshot_key:
+        type: int
+        required: true
+        unique: true
+        constraints:
+          min: 1
+
+      realm_key:
+        type: int
+        required: true
+        constraints:
+          min: 1
+
+      structure_map_key:
+        type: int
+        required: true
+        constraints:
+          min: 1
+
+      company_level:
+        type: int
+        required: true
+        constraints:
+          min: 1
+
+      production_speed_delta:
+        type: float
+        required: true
+
+      sales_speed_delta:
+        type: float
+        required: true
