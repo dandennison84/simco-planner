@@ -10,10 +10,10 @@ class ContractInputs:
     """
     Minimal contract inputs.
 
-    This is intentionally permissive at bootstrap time:
-    - we load files if present
-    - we do not enforce schema yet
-    - schema enforcement comes with tests and validation rules
+    Bootstrap behavior:
+    - load known surfaces if files exist
+    - normalize values (clean layer) at ingestion
+    - schema enforcement comes later (validation / typed layer)
     """
     input_tables: Dict[str, List[dict]]
     reference_tables: Dict[str, List[dict]]
@@ -30,6 +30,19 @@ class ContractOutputs:
     output_tables: Dict[str, List[dict]]
 
 
+def _clean_row(row: dict) -> dict:
+    """
+    Clean layer normalization:
+    - None -> ""
+    - everything -> str(...).strip()
+    """
+    return {k: ("" if v is None else str(v).strip()) for k, v in row.items()}
+
+
+def _clean_table(rows: List[dict]) -> List[dict]:
+    return [_clean_row(r) for r in rows]
+
+
 def _read_csv_rows(path: Path) -> List[dict]:
     import csv
 
@@ -38,7 +51,9 @@ def _read_csv_rows(path: Path) -> List[dict]:
 
     with path.open("r", newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
-        return [row for row in reader]
+        if reader.fieldnames is None:
+            return []
+        return [_clean_row(row) for row in reader]
 
 
 def _write_csv_rows(path: Path, rows: List[dict]) -> None:
@@ -46,7 +61,7 @@ def _write_csv_rows(path: Path, rows: List[dict]) -> None:
 
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    # If no rows, we still write headers if possible; otherwise write empty file.
+    # If no rows, write empty file.
     if not rows:
         path.write_text("", encoding="utf-8")
         return
@@ -62,7 +77,7 @@ def load_contract_inputs(input_dir: Path, reference_dir: Path) -> ContractInputs
     """
     Loads known external contract surfaces if files exist.
 
-    Naming is semantic + snake_case and matches DATA_CONTRACTS.md.
+    Naming is snake_case and matches DATA_CONTRACTS.md.
     Missing files load as empty tables.
     """
     input_names = [
@@ -81,6 +96,10 @@ def load_contract_inputs(input_dir: Path, reference_dir: Path) -> ContractInputs
 
     input_tables = {name: _read_csv_rows(input_dir / f"{name}.csv") for name in input_names}
     reference_tables = {name: _read_csv_rows(reference_dir / f"{name}.csv") for name in reference_names}
+
+    # Ensure tables are always cleaned even if loaders change later.
+    input_tables = {k: _clean_table(v) for k, v in input_tables.items()}
+    reference_tables = {k: _clean_table(v) for k, v in reference_tables.items()}
 
     return ContractInputs(
         input_tables=input_tables,

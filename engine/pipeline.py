@@ -27,23 +27,6 @@ def _fmt_num(x: float) -> str:
     return str(int(x)) if float(x).is_integer() else str(x)
 
 
-# -------------------------
-# Clean layer helpers
-# -------------------------
-def clean_row(row: dict) -> dict:
-    """
-    Normalize a raw CSV row into consistent strings:
-    - None -> ""
-    - everything -> str(...).strip()
-    """
-    return {k: ("" if v is None else str(v).strip()) for k, v in row.items()}
-
-
-def clean_table(rows: list[dict]) -> list[dict]:
-    """Normalize all rows using clean_row()."""
-    return [clean_row(r) for r in rows]
-
-
 def run_pipeline(inputs: ContractInputs) -> ContractOutputs:
     """
     Minimal pipeline behavior to support early acceptance tests.
@@ -54,22 +37,21 @@ def run_pipeline(inputs: ContractInputs) -> ContractOutputs:
         snapshot_key, product_key, produced_quantity, bottleneck
 
     - EO-004: retail priority allocation (retail before exchange) when sales_demand exists
+      Expects sales_demand channel_key.
       Emits diagnostics schema:
         snapshot_key, product_key, produced_quantity, retail_quantity, exchange_quantity
+
+    - EO-005: invalid assignment (fail-fast)
+      slot_product_assignment split_fraction must sum to 1 per slot_key
     """
 
-    # Load & clean surfaces (CSV values arrive as strings; normalize once)
-    company_rows = clean_table(inputs.input_tables.get("company_snapshot", []))
-    structure_rows = clean_table(inputs.input_tables.get("structure_map", []))
-    assignment_rows = clean_table(inputs.input_tables.get("slot_product_assignment", []))
-    bom_rows = clean_table(inputs.reference_tables.get("product_bom", []))
+    company_rows = inputs.input_tables.get("company_snapshot", [])
+    structure_rows = inputs.input_tables.get("structure_map", [])
+    assignment_rows = inputs.input_tables.get("slot_product_assignment", [])
+    bom_rows = inputs.reference_tables.get("product_bom", [])
+    sales_rows = inputs.input_tables.get("sales_demand", [])
 
-    # Optional EO-004 surface (added during channel_key migration)
-    sales_rows = clean_table(inputs.input_tables.get("sales_demand", []))
-
-    diagnostics_rows: list[dict] = []
-
-    # Minimal: single snapshot, single slot, single assignment.
+    # Guard: minimal data required
     if not (company_rows and structure_rows and assignment_rows):
         return ContractOutputs(
             output_tables={
@@ -79,6 +61,24 @@ def run_pipeline(inputs: ContractInputs) -> ContractOutputs:
             }
         )
 
+    # ------------------------------------------------------------
+    # EO-005: validate assignment splits (fail-fast)
+    # ------------------------------------------------------------
+    # Sum split_fraction per slot_key must equal 1.0 (within epsilon)
+    slot_totals: dict[str, float] = {}
+    for row in assignment_rows:
+        slot_key = row.get("slot_key", "")
+        frac = _to_float(row.get("split_fraction", "0"))
+        slot_totals[slot_key] = slot_totals.get(slot_key, 0.0) + frac
+
+    eps = 1e-6
+    for slot_key, total in slot_totals.items():
+        if abs(total - 1.0) > eps:
+            raise ValueError(f"invalid split_fraction total for slot_key={slot_key}: {total}")
+
+    # ------------------------------------------------------------
+    # Current simplified model: single snapshot, single slot, first assignment row
+    # ------------------------------------------------------------
     company = company_rows[0]
     slot = structure_rows[0]
     assign = assignment_rows[0]
@@ -86,10 +86,12 @@ def run_pipeline(inputs: ContractInputs) -> ContractOutputs:
     snapshot_key = company.get("snapshot_key", "")
     product_key = assign.get("product_key", "")
 
-    # --- EO-002: production / bottleneck ---
     labor_available = _to_float(company.get("labor_available", "0"))
     capacity = _to_float(slot.get("capacity", "0"))
 
+    # ------------------------------------------------------------
+    # EO-002: bottleneck calculation (labor constraint)
+    # ------------------------------------------------------------
     labor_per_unit = 0.0
     for r in bom_rows:
         if r.get("product_key", "") == product_key and r.get("input_product_key", "") == "labor":
@@ -102,6 +104,8 @@ def run_pipeline(inputs: ContractInputs) -> ContractOutputs:
     else:
         produced = capacity
         bottleneck = "none"
+
+    diagnostics_rows: list[dict] = []
 
     # If no sales_demand provided, emit EO-002 schema (do NOT add extra columns)
     if not sales_rows:
@@ -122,21 +126,29 @@ def run_pipeline(inputs: ContractInputs) -> ContractOutputs:
             }
         )
 
-    # --- EO-004: retail before exchange allocation ---
+    # ------------------------------------------------------------
+    # EO-004: retail before exchange allocation
+    # ------------------------------------------------------------
     retail_demand = 0.0
     exchange_demand = 0.0
 
     for row in sales_rows:
-        # Robust join (strings already stripped by clean_row)
         if row.get("product_key", "") != product_key:
             continue
 
-        # channel_key arrives as string from CSV; normalize once
+        # Primary path: channel_key
         channel_key_raw = row.get("channel_key", "")
         channel_key = _to_int(channel_key_raw, default=None)
+
+        # Optional fallback path (during migration): channel string
         if channel_key is None:
-            # Skip bad rows deterministically (no crash)
-            continue
+            channel = row.get("channel", "")
+            if channel == "retail":
+                channel_key = RETAIL_KEY
+            elif channel == "exchange":
+                channel_key = EXCHANGE_KEY
+            else:
+                continue
 
         demand = _to_float(row.get("demand", "0"))
 
