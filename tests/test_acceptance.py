@@ -4,7 +4,7 @@ import csv
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, List, Tuple
 
 import pytest
 
@@ -72,7 +72,6 @@ def _list_case_dirs() -> List[CasePaths]:
         case_reference = p / CASE_REFERENCE_DIRNAME
         case_expected = p / CASE_EXPECTED_DIRNAME
 
-        # A case is valid if it has expected/. Inputs/reference may be empty.
         if case_expected.exists() and case_expected.is_dir():
             cases.append(
                 CasePaths(
@@ -88,10 +87,6 @@ def _list_case_dirs() -> List[CasePaths]:
 
 
 def _wipe_dir_contents(dir_path: Path) -> None:
-    """
-    Remove files and folders under dir_path, preserving the directory itself
-    (and preserving any .gitkeep if present).
-    """
     dir_path.mkdir(parents=True, exist_ok=True)
     for child in dir_path.iterdir():
         if child.is_file():
@@ -103,11 +98,9 @@ def _wipe_dir_contents(dir_path: Path) -> None:
 
 
 def _copy_tree_if_exists(src_dir: Path, dst_dir: Path) -> None:
-    """
-    Copy all files from src_dir into dst_dir (non-recursive).
-    """
     if not src_dir.exists():
         return
+
     dst_dir.mkdir(parents=True, exist_ok=True)
 
     for f in src_dir.iterdir():
@@ -116,11 +109,6 @@ def _copy_tree_if_exists(src_dir: Path, dst_dir: Path) -> None:
 
 
 def _detect_delimiter(path: Path) -> str:
-    """
-    Supports either comma-delimited or pipe-delimited case files.
-    - If the header line contains '|', treat as pipe.
-    - Else default to comma.
-    """
     with path.open("r", encoding="utf-8", newline="") as fp:
         first_line = fp.readline()
     return "|" if "|" in first_line else ","
@@ -130,34 +118,21 @@ def _read_csv_as_rows(path: Path) -> List[Dict[str, str]]:
     delim = _detect_delimiter(path)
     with path.open("r", encoding="utf-8", newline="") as fp:
         reader = csv.DictReader(fp, delimiter=delim)
-        # If file is empty, DictReader.fieldnames may be None
         if reader.fieldnames is None:
             return []
         return [dict(row) for row in reader]
 
 
 def _canonical_row_key(row: Dict[str, str]) -> Tuple[Tuple[str, str], ...]:
-    """
-    Deterministic ordering for comparisons independent of output row order.
-    Uses full row content (sorted by column name).
-    """
     return tuple(sorted((k, "" if v is None else str(v)) for k, v in row.items()))
 
 
 def _normalize_rows(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
-    """
-    Normalize rows for comparison:
-    - ensure all values are strings
-    - sort rows deterministically
-    """
     normalized = [{k: ("" if v is None else str(v)) for k, v in r.items()} for r in rows]
     return sorted(normalized, key=_canonical_row_key)
 
 
 def _diff_rows(expected: List[Dict[str, str]], actual: List[Dict[str, str]]) -> str:
-    """
-    Produce a compact diff message for assertion errors.
-    """
     exp = _normalize_rows(expected)
     act = _normalize_rows(actual)
 
@@ -171,18 +146,17 @@ def _diff_rows(expected: List[Dict[str, str]], actual: List[Dict[str, str]]) -> 
     extra = act_keys - exp_keys
 
     lines: List[str] = []
+
     if missing:
         lines.append(f"Missing {len(missing)} row(s) from actual output.")
-        sample = list(sorted(missing))[:3]
-        for i, s in enumerate(sample, 1):
+        for i, s in enumerate(sorted(missing)[:3], 1):
             lines.append(f"  missing[{i}]: {s}")
+
     if extra:
         lines.append(f"Unexpected {len(extra)} extra row(s) in actual output.")
-        sample = list(sorted(extra))[:3]
-        for i, s in enumerate(sample, 1):
+        for i, s in enumerate(sorted(extra)[:3], 1):
             lines.append(f"  extra[{i}]: {s}")
 
-    # Fallback: show first row mismatch if both sets are same cardinality but differ by value formatting
     if not missing and not extra and exp and act:
         lines.append("Row sets differ (likely formatting/canonicalization).")
         lines.append(f"  expected[0]: {_canonical_row_key(exp[0])}")
@@ -202,34 +176,41 @@ _CASE_IDS = [c.case_name for c in _CASES]
 
 @pytest.mark.parametrize("case", _CASES, ids=_CASE_IDS)
 def test_acceptance_case(case: CasePaths) -> None:
-    """
-    Table-driven acceptance test:
-
-    For each case folder under tests/cases/<case_name>:
-      - copy case/input/*.csv -> data/input/
-      - copy case/reference/*.csv -> data/reference/
-      - run engine
-      - compare data/output/*.csv against case/expected/*.csv for files present in expected/
-    """
-    # Clean slate for this case
+    # Clean slate
     _wipe_dir_contents(_data_input_dir())
     _wipe_dir_contents(_data_reference_dir())
     _wipe_dir_contents(_data_output_dir())
 
-    # Install case inputs
+    # Install case data
     _copy_tree_if_exists(case.case_input, _data_input_dir())
     _copy_tree_if_exists(case.case_reference, _data_reference_dir())
 
+    should_fail = "eo_005" in case.case_name
+
     # Execute engine
-    rc = run_engine()
+    try:
+        rc = run_engine()
+
+        if should_fail:
+            raise AssertionError(
+                f"Case '{case.case_name}' expected failure but succeeded"
+            )
+
+    except Exception:
+        if should_fail:
+            return  # ✅ expected failure
+        else:
+            raise
+
+    # Normal validation
     assert rc == 0, f"Engine returned non-zero exit code {rc} for case '{case.case_name}'."
 
-    # Validate outputs
     expected_files = _expected_files(case.case_expected)
     assert expected_files, f"Case '{case.case_name}' has no expected/*.csv files."
 
     for exp_path in expected_files:
         out_path = _data_output_dir() / exp_path.name
+
         assert out_path.exists(), (
             f"Case '{case.case_name}' expected output '{exp_path.name}' "
             f"but engine did not produce '{out_path}'."
@@ -239,6 +220,7 @@ def test_acceptance_case(case: CasePaths) -> None:
         actual_rows = _read_csv_as_rows(out_path)
 
         diff = _diff_rows(expected_rows, actual_rows)
+
         assert diff == "", (
             f"Case '{case.case_name}' output mismatch for '{exp_path.name}':\n{diff}"
         )
