@@ -70,6 +70,7 @@ def load_contract_inputs(input_dir: Path, reference_dir: Path) -> ContractInputs
         "financial_snapshot",
         "structure_map",
         "slot_product_assignment",
+        "sales_demand",
     ]
 
     reference_names = [
