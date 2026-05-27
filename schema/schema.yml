@@ -38,3 +38,105 @@ tables:
       sales_speed_delta:
         type: float
         required: true
+
+company_observed:
+    version: 1
+    intent: "Observed/actual performance metrics for validation and analysis"
+
+    fields:
+
+      snapshot_key:
+        type: int
+        required: true
+        constraints:
+          min: 1
+
+      sales_per_day:
+        type: float
+        required: false
+
+      net_income_per_day:
+        type: float
+        required: false
+
+      capital_buildings:
+        type: float
+        required: false
+
+      capital_cip:
+        type: float
+        required: false       
+
+structure_map:
+    version: 1
+    intent: "Defines the building composition of a map at slot-level granularity"
+
+    fields:
+
+      map_structure_key:
+        type: int
+        required: true
+        constraints:
+          min: 1
+
+      slot_key:
+        type: int
+        required: true
+        constraints:
+          min: 1
+
+      slot_state_key:
+        type: int
+        required: true
+        constraints:
+          min: 1
+
+      building_key:
+        type: int
+        required: true
+        constraints:
+          min: 1
+
+      building_level:
+        type: int
+        required: true
+        constraints:
+          min: 1
+
+      robots_installed:
+        type: string
+        required: true
+
+slot_product_assignment:
+    version: 1
+    intent: "Defines how each building slot's capacity is allocated across product and quality-level outputs over time"
+
+    fields:
+
+      map_structure_key:
+        type: int
+        required: true
+        constraints:
+          min: 1
+
+      slot_key:
+        type: int
+        required: true
+        constraints:
+          min: 1
+
+      product_key:
+        type: int
+        required: true
+        constraints:
+          min: 1
+
+      quality_level:
+        type: int
+        required: true
+        constraints:
+          min: 0
+
+      split_fraction:
+        type: float
+        required: true

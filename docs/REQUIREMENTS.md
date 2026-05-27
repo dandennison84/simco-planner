@@ -5,22 +5,21 @@
 Define what the system must do, how the domain behaves, and what outputs are expected.
 
 This document captures:
-- user intent
-- system capabilities
-- domain rules
-- expected outputs
+
+- user intent  
+- system capabilities  
+- domain behavior  
+- expected outputs  
 
 All requirements must be:
-- testable
-- explicit
-- table-driven
 
+- explicit  
+- testable  
+- aligned to system structure  
 
 ---
 
 ## 1. User Stories
-
-Describe why the system exists.
 
 | ID | User | Goal | Reason |
 |----|------|------|--------|
@@ -28,12 +27,9 @@ Describe why the system exists.
 | US-002 | Player | Plan production strategy | Maximize economic outcome |
 | US-003 | Player | Simulate scenarios | Evaluate decisions over time |
 
-
 ---
 
 ## 2. Use Cases
-
-Each use case represents a question the system must answer.
 
 | ID | Name | Question | Tool |
 |----|------|----------|------|
@@ -41,112 +37,117 @@ Each use case represents a question the system must answer.
 | UC-002 | VI Planner | What should I build in steady state? | VI Planner |
 | UC-003 | Scenario Runner | What happens if I do X over time? | Scenario Runner |
 
-
 ---
 
-## 3. Functional Requirements
+## 3. Core System Requirements
 
-| ID | Requirement | Surface | Grain | Validation |
-|----|------------|---------|-------|-----------|
-| FR-001 | Inputs must be validated and typed | company_snapshot, financial_snapshot | snapshot_key | Reject invalid rows |
-| FR-002 | Assignment must fully define slot usage | slot_product_assignment | slot_key | Split fractions sum to 1 |
-| FR-003 | Structure must not encode assignment | structure_map | structure_key + slot_key | No product fields allowed |
-| FR-004 | Pricing must be resolved per product + quality | market_pricing | product_key + quality_level | All required rows present |
-| FR-005 | Diagnostics must derive only from upstream data | diagnostics | snapshot_key + signal_code | No recomputation |
-| FR-006 | Optimization must produce candidate scenarios only | diagnostics | snapshot_key | No mutation of base data |
-| FR-007 | Guidance must not prescribe actions | guidance | snapshot_key + signal_code | Signals-only derivation |
+The system must:
+
+- accept structured, valid input data  
+- require complete and explicit assignment  
+- keep structure independent from assignment  
+- resolve pricing per product and quality  
+- produce diagnostics and guidance based on system state  
+- generate hypothetical scenarios without altering observed data  
 
 ---
 
 ## 4. Domain Rules (Sim Companies Mechanics)
 
-| ID | Rule | Surface | Grain | Validation |
-|----|------|---------|-------|-----------|
-| DR-001 | All capacity must be explicitly assigned | slot_product_assignment | slot_key | All slots present |
-| DR-002 | Production depends on capacity and modifiers | company_snapshot, structure_map | snapshot_key, slot_key | Deterministic calculation |
-| DR-003 | Retail is satisfied before exchange | diagnostics | snapshot_key + product_key | Ordering enforced |
-| DR-004 | Bottleneck determines production | diagnostics | snapshot_key + product_key | Output capped |
-| DR-005 | Fractional BL must be explicit | slot_product_assignment | slot_key | No implicit rounding |
-| DR-006 | Pricing must meet required quality floor | market_pricing | product_key + quality_level | No invalid substitution |
-| DR-007 | Transport is a diagnostic signal only | diagnostics | snapshot_key + signal_code | No economic impact |
+The engine models the game using deterministic rules.
+
+### Production and Capacity
+
+- Production depends on capacity and modifiers  
+- Bottlenecks limit total output  
+- Fractional BL must be explicitly represented  
 
 ---
 
-## 5. Calculation Rules (Formulas)
+### Allocation and Flow
 
-| ID | Calculation | Surface | Grain | Validation |
-|----|-------------|---------|-------|-----------|
-| CR-001 | Production = capacity × modifiers | diagnostics | snapshot_key + slot_key | Deterministic |
-| CR-002 | Sold ≤ Produced | diagnostics | snapshot_key + product_key | Constraint holds |
-| CR-003 | Profit = revenue - cost | financial_snapshot | snapshot_key | Reconciliation |
-| CR-004 | Cost includes all inputs | diagnostics | snapshot_key + product_key | No omission |
-| CR-005 | Allocation sums to 1 | slot_product_assignment | slot_key | Sum = 1 |
+- Assignment defines how capacity is used  
+- Production is constrained by system limits  
+- Output must remain consistent with available capacity  
 
 ---
 
-## 6. Expected Outputs
+### Sales and Channels
 
-| ID | Scenario | Surface | Input Condition | Expected Output |
-|----|----------|---------|----------------|-----------------|
-| EO-001 | Balanced Production | diagnostics | No bottleneck | All capacity utilized |
-| EO-002 | Bottleneck | diagnostics | Limited BL | Production capped |
-| EO-003 | Overproduction | diagnostics | Produced > demand | Excess unsold |
-| EO-004 | Retail Priority | diagnostics | Limited retail | Retail first |
-| EO-005 | Invalid Assignment | slot_product_assignment | Missing split | Validation failure |
+- Retail is satisfied before exchange  
+- Channels distribute output, not produce it  
+- Transport represents system pressure, not cost  
 
 ---
 
-## 7. Constraints
+### Pricing and Inputs
 
-System-wide rules that must always hold.
-
-| ID | Constraint | Description |
-|----|-----------|------------|
-| C-001 | Determinism | Same input → same output |
-| C-002 | No Implicit Logic | All behavior must be explicit |
-| C-003 | Grain Integrity | No unintended row expansion |
-| C-004 | Separation | Layers must not override upstream results |
+- Pricing is resolved per product and quality level  
+- Inputs must meet required quality thresholds  
+- All inputs must be explicitly defined  
 
 ---
 
-## 8. Validation Rules
+## 5. Expected Outputs
 
-Define how correctness is verified.
-
-| ID | Rule | Method |
-|----|------|--------|
-| VR-001 | Output matches expected | Table comparison |
-| VR-002 | No unit loss | Reconciliation check |
-| VR-003 | Assignment complete | Constraint validation |
-| VR-004 | Signals deterministic | Repeat evaluation |
+| ID | Scenario | Condition | Expected Result |
+|----|----------|----------|-----------------|
+| EO-001 | Balanced Production | No bottleneck | All capacity utilized |
+| EO-002 | Bottleneck | Limited BL | Production constrained |
+| EO-003 | Overproduction | Produced > demand | Excess unsold |
+| EO-004 | Retail Priority | Limited retail capacity | Retail satisfied first |
+| EO-005 | Invalid Assignment | Missing or incomplete splits | Validation failure |
 
 ---
 
-## 9. Surface Coverage
+## 6. System Constraints
 
-| Surface | Covered By |
-|--------|------------|
-| company_snapshot | FR-001, CR-001 |
-| financial_snapshot | FR-001, CR-003 |
-| structure_map | FR-003, DR-002 |
-| slot_product_assignment | FR-002, DR-001, CR-005 |
-| market_pricing | FR-004, DR-006 |
-| product_bom | DR-002 |
-| system_parameters | FR-001 |
-| diagnostics | FR-005, DR-003, DR-004, CR-001 |
-| guidance | FR-007 |
-| signal_evidence | FR-005 |
+The system must:
+
+- behave deterministically (same input → same output)  
+- operate only on explicit inputs  
+- preserve structural consistency across all layers  
+
+---
+
+## 7. Validation Requirements
+
+Validation must ensure:
+
+- inputs conform to schema  
+- invalid data is rejected before execution  
+- assignment completeness is enforced  
+- outputs are internally consistent  
+
+---
+
+## 8. Surface Coverage
+
+| Surface | Role |
+|--------|------|
+| company_snapshot | observed company state |
+| financial_snapshot | observed financial results |
+| structure_map | building layout and capacity |
+| slot_product_assignment | capacity allocation |
+| market_pricing | pricing data |
+| product_bom | input relationships |
+| system_parameters | configuration |
+| diagnostics | system outputs |
+| guidance | interpretation layer |
+| signal_evidence | diagnostic trace |
 
 ---
 
 ## Summary
 
 Requirements define:
-- what the system must do
-- how the domain behaves
-- what outputs are expected
 
-All requirements must be:
-- explicit
-- testable
-- aligned to system layers
+- what the system must do  
+- how the domain behaves  
+- what outputs must be produced  
+
+All behavior must be:
+
+- explicit  
+- testable  
+- deterministic  

@@ -22,6 +22,52 @@ It produces:
 
 ---
 
+## Where to go next
+
+If you are new:
+→ Start with system structure: /docs/ARCHITECTURE.md
+
+If you want to understand behavior:
+→ See requirements and domain rules: /docs/REQUIREMENTS.md
+
+If you are making changes:
+→ Follow development process: /docs/PROCESS.md
+
+If you need implementation details:
+→ See data contracts and schema: /docs/DATA_CONTRACTS.md
+
+---
+
+## System Model
+
+The engine operates as a layered transformation system:
+
+USER INPUT
+(company_snapshot, structure_map, assignment)
+        ↓
+VALIDATION
+(schema + invariants)
+        ↓
+STRUCTURE
+(building capacity & topology)
+        ↓
+ALLOCATION
+(slot → product × quality split)
+        ↓
+THROUGHPUT
+(quantity resolution + constraints)
+        ↓
+ECONOMICS
+(value applied to flow)
+        ↓
+DIAGNOSTICS
+(facts → signals → guidance)
+        ↓
+OUTPUT
+(diagnostics, guidance, evidence)
+
+---
+
 ## Core Idea
 
 The engine is not a dashboard or optimizer.
@@ -94,9 +140,7 @@ The system operates on a defined set of core data surfaces:
 - guidance
 - signal_evidence
 
-Full definitions are in:
-
-/docs/DATA_CONTRACTS.md
+→ Table definitions and contract rules: /docs/DATA_CONTRACTS.md
 
 ---
 
@@ -112,9 +156,7 @@ Each stage:
 - produces tables
 - enforces strict contracts
 
-See:
-
-/docs/ARCHITECTURE.md
+→ System structure, pipeline, and layers: /docs/ARCHITECTURE.md
 
 ---
 
@@ -128,9 +170,7 @@ System behavior is defined through:
 
 All requirements are explicit and testable.
 
-See:
-
-/docs/REQUIREMENTS.md
+→ System requirements: /docs/REQUIREMENTS.md
 
 ---
 
@@ -152,10 +192,13 @@ The project follows:
 - table-driven requirements
 - CSV-based data contracts
 
-See:
+→ Development workflow and contribution rules:
+/docs/PROCESS.md
 
-/docs/GIT_WORKFLOW.md  
-/docs/PROCESS.md  
+→ Version control and commits:
+/docs/GIT_WORKFLOW.md
+
+→ Naming standards:
 /docs/NAMING_CONVENTIONS.md
 
 ---
@@ -187,3 +230,11 @@ It answers:
 - what options exist
 
 Without ever replacing observed truth.
+
+## Reference
+
+→ Decision history and architecture evolution:
+/docs/DECISIONS.md
+
+→ Engine invariants (advanced):
+/docs/RULES.md
