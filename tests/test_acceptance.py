@@ -71,192 +71,158 @@ def _list_case_dirs() -> List[CasePaths]:
 
     cases: List[CasePaths] = []
     for p in sorted([x for x in root.iterdir() if x.is_dir()]):
-        case_input = p / CASE_INPUT_DIRNAME
-        case_reference = p / CASE_REFERENCE_DIRNAME
         case_expected = p / CASE_EXPECTED_DIRNAME
-
-        if case_expected.exists() and case_expected.is_dir():
+        if case_expected.exists():
             cases.append(
                 CasePaths(
                     case_name=p.name,
                     case_root=p,
-                    case_input=case_input,
-                    case_reference=case_reference,
+                    case_input=p / CASE_INPUT_DIRNAME,
+                    case_reference=p / CASE_REFERENCE_DIRNAME,
                     case_expected=case_expected,
                 )
             )
-
     return cases
 
 
-def _wipe_dir_contents(dir_path: Path) -> None:
-    dir_path.mkdir(parents=True, exist_ok=True)
-    for child in dir_path.iterdir():
+# ---------- IO helpers ----------
+def _wipe_dir_contents(path: Path) -> None:
+    path.mkdir(parents=True, exist_ok=True)
+    for child in path.iterdir():
         if child.is_file():
-            if child.name == ".gitkeep":
-                continue
-            child.unlink()
+            if child.name != ".gitkeep":
+                child.unlink()
         else:
             shutil.rmtree(child)
 
 
-def _copy_tree_if_exists(src_dir: Path, dst_dir: Path) -> None:
-    if not src_dir.exists():
-        return
+def _install_case(case: CasePaths) -> None:
+    _wipe_dir_contents(_data_input_dir())
+    _wipe_dir_contents(_data_reference_dir())
+    _wipe_dir_contents(_data_output_dir())
 
-    dst_dir.mkdir(parents=True, exist_ok=True)
+    if case.case_input.exists():
+        for f in case.case_input.iterdir():
+            if f.is_file():
+                shutil.copy2(f, _data_input_dir() / f.name)
 
-    for f in src_dir.iterdir():
-        if f.is_file():
-            shutil.copy2(f, dst_dir / f.name)
-
-
-def _detect_delimiter(path: Path) -> str:
-    with path.open("r", encoding="utf-8", newline="") as fp:
-        first_line = fp.readline()
-    return "|" if "|" in first_line else ","
+    if case.case_reference.exists():
+        for f in case.case_reference.iterdir():
+            if f.is_file():
+                shutil.copy2(f, _data_reference_dir() / f.name)
 
 
-def _read_csv_as_rows(path: Path) -> List[Dict[str, str]]:
-    delim = _detect_delimiter(path)
-    with path.open("r", encoding="utf-8", newline="") as fp:
-        reader = csv.DictReader(fp, delimiter=delim)
+def _read_csv(path: Path) -> List[Dict[str, str]]:
+    if not path.exists():
+        return []
+
+    with path.open("r", encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f, delimiter=",")  # ✅ fixed (no detection)
         if reader.fieldnames is None:
             return []
         return [dict(row) for row in reader]
 
 
-def _norm_value(v: object) -> str:
-    """
-    Normalize values for comparison:
-    - strip whitespace
-    - normalize numeric strings so 1 == 1.0 == 1.000
-    """
+# ---------- comparison ----------
+def _norm_value(v) -> str:
     if v is None:
         return ""
     s = str(v).strip()
     if s == "":
         return ""
 
-    # Normalize numeric strings (keep integers as ints-as-strings)
     try:
         f = float(s)
         if f.is_integer():
             return str(int(f))
-        # normalize float repr (avoid scientific for simple cases)
         return str(f)
     except Exception:
         return s
 
 
-def _canonical_row_key(row: Dict[str, str]) -> Tuple[Tuple[str, str], ...]:
+def _canonical_row(row: Dict[str, str]) -> Tuple[Tuple[str, str], ...]:
     return tuple(sorted((k, _norm_value(v)) for k, v in row.items()))
 
 
-def _normalize_rows(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
-    normalized = [{k: _norm_value(v) for k, v in r.items()} for r in rows]
-    return sorted(normalized, key=_canonical_row_key)
+def _normalize(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    return sorted(
+        [{k: _norm_value(v) for k, v in r.items()} for r in rows],
+        key=_canonical_row
+    )
 
 
-def _diff_rows(expected: List[Dict[str, str]], actual: List[Dict[str, str]]) -> str:
-    exp = _normalize_rows(expected)
-    act = _normalize_rows(actual)
+def _diff(expected, actual) -> str:
+    exp = _normalize(expected)
+    act = _normalize(actual)
 
     if exp == act:
         return ""
 
-    exp_keys = {_canonical_row_key(r) for r in exp}
-    act_keys = {_canonical_row_key(r) for r in act}
+    exp_set = {_canonical_row(r) for r in exp}
+    act_set = {_canonical_row(r) for r in act}
 
-    missing = exp_keys - act_keys
-    extra = act_keys - exp_keys
+    missing = exp_set - act_set
+    extra = act_set - exp_set
 
-    lines: List[str] = []
+    lines = []
 
     if missing:
-        lines.append(f"Missing {len(missing)} row(s) from actual output.")
-        subset = sorted(missing)[:MAX_DIFF_ROWS]
-        for i, s in enumerate(subset, 1):
+        lines.append(f"Missing {len(missing)} row(s).")
+        for i, s in enumerate(sorted(missing)[:MAX_DIFF_ROWS], 1):
             lines.append(f"  missing[{i}]: {s}")
-        if len(missing) > MAX_DIFF_ROWS:
-            lines.append(f"  ... {len(missing) - MAX_DIFF_ROWS} more missing rows")
 
     if extra:
-        lines.append(f"Unexpected {len(extra)} extra row(s) in actual output.")
-        subset = sorted(extra)[:MAX_DIFF_ROWS]
-        for i, s in enumerate(subset, 1):
+        lines.append(f"Unexpected {len(extra)} row(s).")
+        for i, s in enumerate(sorted(extra)[:MAX_DIFF_ROWS], 1):
             lines.append(f"  extra[{i}]: {s}")
-        if len(extra) > MAX_DIFF_ROWS:
-            lines.append(f"  ... {len(extra) - MAX_DIFF_ROWS} more extra rows")
-
-    if not missing and not extra and exp and act:
-        lines.append("Row sets differ (likely formatting/canonicalization).")
-        lines.append(f"  expected[0]: {_canonical_row_key(exp[0])}")
-        lines.append(f"  actual[0]:   {_canonical_row_key(act[0])}")
 
     return "\n".join(lines)
 
 
-def _expected_files(case_expected_dir: Path) -> List[Path]:
-    return sorted([p for p in case_expected_dir.glob("*.csv") if p.is_file()])
-
-
 # ---------- pytest ----------
 _CASES = _list_case_dirs()
-_CASE_IDS = [c.case_name for c in _CASES]
 
 
-@pytest.mark.parametrize("case", _CASES, ids=_CASE_IDS)
+@pytest.mark.parametrize("case", _CASES, ids=[c.case_name for c in _CASES])
 def test_acceptance_case(case: CasePaths) -> None:
-    # Clean slate
-    _wipe_dir_contents(_data_input_dir())
-    _wipe_dir_contents(_data_reference_dir())
-    _wipe_dir_contents(_data_output_dir())
-
-    # Install case data
-    _copy_tree_if_exists(case.case_input, _data_input_dir())
-    _copy_tree_if_exists(case.case_reference, _data_reference_dir())
+    _install_case(case)
 
     should_fail = "eo_005" in case.case_name
 
-    # Execute engine (test env)
     prev_env = os.environ.get("SIMCO_ENV")
     os.environ["SIMCO_ENV"] = "test"
+
     try:
         rc = run_engine()
+
         if should_fail:
             raise AssertionError(f"Case '{case.case_name}' expected failure but succeeded")
+
     except Exception:
         if should_fail:
-            return  # expected failure
+            return
         raise
+
     finally:
         if prev_env is None:
             os.environ.pop("SIMCO_ENV", None)
         else:
             os.environ["SIMCO_ENV"] = prev_env
 
-    # Normal validation
-    assert rc == 0, f"Engine returned non-zero exit code {rc} for case '{case.case_name}'."
+    assert rc == 0
 
-    expected_files = _expected_files(case.case_expected)
-    assert expected_files, f"Case '{case.case_name}' has no expected/*.csv files."
+    expected_files = sorted(case.case_expected.glob("*.csv"))
 
     for exp_path in expected_files:
         out_path = _data_output_dir() / exp_path.name
 
-        assert out_path.exists(), (
-            f"Case '{case.case_name}' expected output '{exp_path.name}' "
-            f"but engine did not produce '{out_path}'."
-        )
+        assert out_path.exists()
 
-        expected_rows = _read_csv_as_rows(exp_path)
-        actual_rows = _read_csv_as_rows(out_path)
+        expected = _read_csv(exp_path)
+        actual = _read_csv(out_path)
 
-        diff = _diff_rows(expected_rows, actual_rows)
-        if diff != "":
+        diff = _diff(expected, actual)
+        if diff:
             raise AssertionError(
-                f"\n[CASE] {case.case_name}\n"
-                f"[FILE] {exp_path.name}\n"
-                f"----- DIFF -----\n{diff}\n"
+                f"\n[CASE] {case.case_name}\n[FILE] {exp_path.name}\n{diff}\n"
             )

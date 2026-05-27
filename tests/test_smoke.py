@@ -1,27 +1,41 @@
 from __future__ import annotations
 
-from pathlib import Path
-
-from engine.io_csv import load_contract_inputs
+from engine.io_csv import ContractInputs
 from engine.pipeline import run_pipeline
 
 
 def test_pipeline_runs_and_emits_contract_outputs() -> None:
-    from engine.pipeline import run_pipeline
-    from engine.io_csv import ContractInputs
-
     inputs = ContractInputs(
         input_tables={
-            "company_snapshot": [{"snapshot_key": "s1", "labor_available": "100"}],
-            "structure_map": [{"structure_key": "plant_1", "slot_key": "slot_1", "capacity": "100"}],
+            "company_snapshot": [
+                {
+                    "snapshot_key": "1",
+                    "realm_key": "1",
+                    "structure_map_key": "1",
+                    "company_level": "10",
+                    "production_speed_delta": "0",
+                    "sales_speed_delta": "0",
+                }
+            ],
+            "structure_map": [
+                {
+                    "structure_map_key": "1",
+                    "slot_key": "slot_1",
+                    "capacity": "100",
+                }
+            ],
             "slot_product_assignment": [
-                {"slot_key": "slot_1", "product_key": "apple", "quality_level": "q1", "split_fraction": "1.0"}
+                {
+                    "slot_key": "slot_1",
+                    "product_key": "apple",
+                    "split_fraction": "1.0",
+                }
             ],
             "financial_snapshot": [],
             "sales_demand": [],
         },
         reference_tables={
-            "product_bom": [{"product_key": "apple", "input_product_key": "labor", "input_quantity": "2"}],
+            "product_bom": [],
             "market_pricing": [],
             "system_parameters": [],
         },
@@ -29,4 +43,24 @@ def test_pipeline_runs_and_emits_contract_outputs() -> None:
 
     outputs = run_pipeline(inputs)
 
+    # ✅ contract exists
     assert "diagnostics" in outputs.output_tables
+
+    diagnostics = outputs.output_tables["diagnostics"]
+
+    # ✅ at least one row produced
+    assert len(diagnostics) == 1
+
+    row = diagnostics[0]
+
+    # ✅ required output fields exist
+    assert "snapshot_key" in row
+    assert "product_key" in row
+    assert "produced_quantity" in row
+    assert "bottleneck" in row
+
+    # ✅ expected values (capacity-only bottleneck case)
+    assert row["snapshot_key"] == "1"
+    assert row["product_key"] == "apple"
+    assert row["produced_quantity"] == "100"
+    assert row["bottleneck"] == "capacity"
