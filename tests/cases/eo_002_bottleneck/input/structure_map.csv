@@ -1,2 +1,2 @@
-structure_key,slot_key,capacity
-plant_1,slot_1,100
+structure_map_key,slot_key,capacity
+1,1,50

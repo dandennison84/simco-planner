@@ -1,2 +1,2 @@
-slot_key,product_key,quality_level,split_fraction
-slot_1,apple,q1,1.0
+structure_map_key,slot_key,product_key,split_fraction
+1,1,apple,1.0

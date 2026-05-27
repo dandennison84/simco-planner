@@ -28,6 +28,7 @@ Rules:
 |12 | Data Contract | Need stable interface | Inputs/outputs must be inspectable | Use flat files as contract boundary |
 |13 | Debugging | Need traceable behavior | Inspectable state preferred | Debug via data inspection |
 |14 | Automation | Need regression safety | Standard software practice | Design for automated testing workflows |
+|15 | Coding Style | Need data transformations and side effect avoidance | Standard software practice | Use FP when possible except where it overcomplicates |
 
 ---
 
@@ -35,23 +36,23 @@ Rules:
 
 | # | Topic | Problem | Key Points | Decision |
 |---|------|--------|-----------|----------|
-|15 | Engine Ownership | Logic spread across layers | Hard to maintain and verify | Single engine owns all logic |
-|16 | Integration Layer | UI layer overloaded with logic | Weak for testing and iteration | Integration layer is thin only |
-|17 | System Boundary | Need clear separation | Prevent cross-layer contamination | Use explicit data contract boundary |
-|18 | Data Flow | Need deterministic pipeline | Transformation must be explicit | Pipeline is staged and directional |
-|19 | Testing Level | Unit tests insufficient | Need system-level validation | Add acceptance testing layer |
-|20 | Test Model | Rules are table-based | Align with domain thinking | Use table-driven acceptance tests |
-|21 | Layer Model | Existing model is strong | Already enforces correctness | Keep full layer model |
-|22 | Documentation Role | Docs tied to implementation | Limits flexibility | Docs define invariants only |
-|23 | Implementation Independence | Language coupling limits portability | System should outlive tooling | Remove implementation-specific language |
-|24 | Runtime Isolation | Test data interfered with runtime behavior | Needed separation without changing engine logic | Separate runtime and test data directories |
-|25 | CSV Contract Boundary | Considered reading Excel directly | Engine must remain deterministic and UI-independent | CSV is the sole contract boundary |
-|26 | Validator Layer | No clear data validation boundary | Pipeline must remain pure logic | Add schema-driven validator before pipeline |
-|27 | Schema Ownership | Unclear whether user or system defines structure | User experience must remain simple | Schema owned by system, not input tables |
-|28 | Schema Versioning | Considered embedding version in CSV data | Would complicate user input and pollute tables | Versioning exists only in schema, not CSV |
-|29 | Observability | Engine execution was silent | No signal of data consumption | Always emit table-level run summaries |
-|30 | Schema Scope | Considered schema defining table presence | Schema not yet mature | Keep table surfaces defined in engine for now |
-|31 | User Responsibility | Users potentially managing system metadata | Creates unnecessary complexity | Users only provide business data, no system fields |
+|01 | Engine Ownership | Logic spread across layers | Hard to maintain and verify | Single engine owns all logic |
+|02 | Integration Layer | UI layer overloaded with logic | Weak for testing and iteration | Integration layer is thin only |
+|03 | System Boundary | Need clear separation | Prevent cross-layer contamination | Use explicit data contract boundary |
+|04 | Data Flow | Need deterministic pipeline | Transformation must be explicit | Pipeline is staged and directional |
+|05 | Testing Level | Unit tests insufficient | Need system-level validation | Add acceptance testing layer |
+|06 | Test Model | Rules are table-based | Align with domain thinking | Use table-driven acceptance tests |
+|07 | Layer Model | Existing model is strong | Already enforces correctness | Keep full layer model |
+|08 | Documentation Role | Docs tied to implementation | Limits flexibility | Docs define invariants only |
+|09 | Implementation Independence | Language coupling limits portability | System should outlive tooling | Remove implementation-specific language |
+|10 | Runtime Isolation | Test data interfered with runtime behavior | Needed separation without changing engine logic | Separate runtime and test data directories |
+|11 | CSV Contract Boundary | Considered reading Excel directly | Engine must remain deterministic and UI-independent | CSV is the sole contract boundary |
+|12 | Validator Layer | No clear data validation boundary | Pipeline must remain pure logic | Add schema-driven validator before pipeline |
+|13 | Schema Ownership | Unclear whether user or system defines structure | User experience must remain simple | Schema owned by system, not input tables |
+|14 | Schema Versioning | Considered embedding version in CSV data | Would complicate user input and pollute tables | Versioning exists only in schema, not CSV |
+|15 | Observability | Engine execution was silent | No signal of data consumption | Always emit table-level run summaries |
+|16 | Schema Scope | Considered schema defining table presence | Schema not yet mature | Keep table surfaces defined in engine for now |
+|17 | User Responsibility | Users potentially managing system metadata | Creates unnecessary complexity | Users only provide business data, no system fields |
 
 ---
 
@@ -59,6 +60,6 @@ Rules:
 
 | # | Topic | Problem | Key Points | Decision |
 |---|------|--------|-----------|----------|
-|32 | Source of Truth | Conversations are not persistent | Risk of drift | Repository docs are authoritative |
-|33 | Decision Tracking | Decisions get lost | Need continuity | Maintain decisions log |
-|34 | Execution Independence | System tied to tooling | Limits evolution | Define system independent of runtime |
+|01 | Source of Truth | Conversations are not persistent | Risk of drift | Repository docs are authoritative |
+|02 | Decision Tracking | Decisions get lost | Need continuity | Maintain decisions log |
+|03 | Execution Independence | System tied to tooling | Limits evolution | Define system independent of runtime |

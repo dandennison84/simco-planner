@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import os
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,10 +18,12 @@ CASE_INPUT_DIRNAME = "input"
 CASE_REFERENCE_DIRNAME = "reference"
 CASE_EXPECTED_DIRNAME = "expected"
 
-REPO_DATA_DIRNAME = "data/test"
+REPO_DATA_DIRNAME = Path("data") / "test"
 REPO_INPUT_DIRNAME = "input"
 REPO_REFERENCE_DIRNAME = "reference"
 REPO_OUTPUT_DIRNAME = "output"
+
+MAX_DIFF_ROWS = 3
 
 
 # ---------- helpers ----------
@@ -123,12 +126,35 @@ def _read_csv_as_rows(path: Path) -> List[Dict[str, str]]:
         return [dict(row) for row in reader]
 
 
+def _norm_value(v: object) -> str:
+    """
+    Normalize values for comparison:
+    - strip whitespace
+    - normalize numeric strings so 1 == 1.0 == 1.000
+    """
+    if v is None:
+        return ""
+    s = str(v).strip()
+    if s == "":
+        return ""
+
+    # Normalize numeric strings (keep integers as ints-as-strings)
+    try:
+        f = float(s)
+        if f.is_integer():
+            return str(int(f))
+        # normalize float repr (avoid scientific for simple cases)
+        return str(f)
+    except Exception:
+        return s
+
+
 def _canonical_row_key(row: Dict[str, str]) -> Tuple[Tuple[str, str], ...]:
-    return tuple(sorted((k, "" if v is None else str(v)) for k, v in row.items()))
+    return tuple(sorted((k, _norm_value(v)) for k, v in row.items()))
 
 
 def _normalize_rows(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
-    normalized = [{k: ("" if v is None else str(v)) for k, v in r.items()} for r in rows]
+    normalized = [{k: _norm_value(v) for k, v in r.items()} for r in rows]
     return sorted(normalized, key=_canonical_row_key)
 
 
@@ -149,13 +175,19 @@ def _diff_rows(expected: List[Dict[str, str]], actual: List[Dict[str, str]]) -> 
 
     if missing:
         lines.append(f"Missing {len(missing)} row(s) from actual output.")
-        for i, s in enumerate(sorted(missing)[:3], 1):
+        subset = sorted(missing)[:MAX_DIFF_ROWS]
+        for i, s in enumerate(subset, 1):
             lines.append(f"  missing[{i}]: {s}")
+        if len(missing) > MAX_DIFF_ROWS:
+            lines.append(f"  ... {len(missing) - MAX_DIFF_ROWS} more missing rows")
 
     if extra:
         lines.append(f"Unexpected {len(extra)} extra row(s) in actual output.")
-        for i, s in enumerate(sorted(extra)[:3], 1):
+        subset = sorted(extra)[:MAX_DIFF_ROWS]
+        for i, s in enumerate(subset, 1):
             lines.append(f"  extra[{i}]: {s}")
+        if len(extra) > MAX_DIFF_ROWS:
+            lines.append(f"  ... {len(extra) - MAX_DIFF_ROWS} more extra rows")
 
     if not missing and not extra and exp and act:
         lines.append("Row sets differ (likely formatting/canonicalization).")
@@ -187,23 +219,22 @@ def test_acceptance_case(case: CasePaths) -> None:
 
     should_fail = "eo_005" in case.case_name
 
-    # Execute engine
+    # Execute engine (test env)
+    prev_env = os.environ.get("SIMCO_ENV")
+    os.environ["SIMCO_ENV"] = "test"
     try:
-        import os
-        os.environ["SIMCO_ENV"] = "test"
-
         rc = run_engine()
-
         if should_fail:
-            raise AssertionError(
-                f"Case '{case.case_name}' expected failure but succeeded"
-            )
-
+            raise AssertionError(f"Case '{case.case_name}' expected failure but succeeded")
     except Exception:
         if should_fail:
-            return  # ✅ expected failure
+            return  # expected failure
+        raise
+    finally:
+        if prev_env is None:
+            os.environ.pop("SIMCO_ENV", None)
         else:
-            raise
+            os.environ["SIMCO_ENV"] = prev_env
 
     # Normal validation
     assert rc == 0, f"Engine returned non-zero exit code {rc} for case '{case.case_name}'."
@@ -223,7 +254,9 @@ def test_acceptance_case(case: CasePaths) -> None:
         actual_rows = _read_csv_as_rows(out_path)
 
         diff = _diff_rows(expected_rows, actual_rows)
-
-        assert diff == "", (
-            f"Case '{case.case_name}' output mismatch for '{exp_path.name}':\n{diff}"
-        )
+        if diff != "":
+            raise AssertionError(
+                f"\n[CASE] {case.case_name}\n"
+                f"[FILE] {exp_path.name}\n"
+                f"----- DIFF -----\n{diff}\n"
+            )

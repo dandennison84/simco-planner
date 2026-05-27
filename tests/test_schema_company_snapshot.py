@@ -15,7 +15,7 @@ def test_schema_loads_and_has_company_snapshot() -> None:
     assert cs.get("version") == 1
 
 
-def test_validator_emits_log_and_passes_through_rows_when_noop() -> None:
+def test_validator_emits_log_and_types_rows() -> None:
     schema = load_schema(Path("schema") / "schema.yml")
     cs_schema = _table_schema(schema, "company_snapshot")
 
@@ -40,34 +40,39 @@ def test_validator_emits_log_and_passes_through_rows_when_noop() -> None:
     assert log["rows_valid"] == 1
     assert log["rows_dropped"] == 0
     assert log["errors"] == []
-    assert log["warnings"] == []
 
-    # no-op validator should pass rows through unchanged
-    assert result["rows"] == rows
+    out_rows = result["rows"]
+    assert len(out_rows) == 1
+
+    r = out_rows[0]
+    # typed expectations
+    assert r["snapshot_key"] == 1
+    assert r["realm_key"] == 1
+    assert r["structure_map_key"] == 1
+    assert r["company_level"] == 10
+    assert r["production_speed_delta"] == 0.03
+    assert r["sales_speed_delta"] == 0.02
 
 
-def test_validator_currently_does_not_enforce_required_fields_or_constraints() -> None:
-    """
-    This test documents the CURRENT behavior: validator is no-op.
-    Once you implement enforcement, replace this test with real negative tests.
-    """
+def test_validator_rejects_missing_required_fields_and_bad_values() -> None:
     schema = load_schema(Path("schema") / "schema.yml")
     cs_schema = _table_schema(schema, "company_snapshot")
 
-    # missing required fields + invalid values
     bad_rows = [
         {
-            "snapshot_key": "0",  # would violate min:1 once enforced
+            "snapshot_key": "0",  # violates min: 1
             # realm_key missing
-            "structure_map_key": "-5",  # would violate min:1 once enforced
-            "company_level": "0",  # would violate min:1 once enforced
-            "production_speed_delta": "not_a_float",  # would violate float typing once enforced
+            "structure_map_key": "-5",  # violates min: 1
+            "company_level": "0",  # violates min: 1
+            "production_speed_delta": "not_a_float",  # type error
             "sales_speed_delta": "0.02",
         }
     ]
 
     result = validate_table(bad_rows, cs_schema)
+    log = result["log"]
 
-    # current no-op behavior: still reports no errors
-    assert result["log"]["errors"] == []
-    assert result["log"]["rows_valid"] == 1
+    assert log["rows_read"] == 1
+    assert log["rows_valid"] == 0
+    assert log["rows_dropped"] == 1
+    assert len(log["errors"]) > 0

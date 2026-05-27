@@ -58,9 +58,23 @@ def main() -> int:
         total_tables += 1
         total_rows += log["rows_read"]
 
-        print(
-            f"[schema] {name}: rows={log['rows_read']} valid={log['rows_valid']}"
-        )
+        print(f"[schema] {name}: rows={log['rows_read']} valid={log['rows_valid']}")
+
+        if log["rows_dropped"] > 0:
+            print(f"[schema][DROP] {name}: {log['rows_dropped']} row(s) removed")
+
+        # ✅ NEW: print errors (clean + capped)
+        if log["errors"]:
+            print(f"[schema][ERROR] {name}: {len(log['errors'])} issue(s)")
+
+            MAX_ERR = 3
+            for i, err in enumerate(log["errors"][:MAX_ERR], 1):
+                print(
+                    f"  {i}. row={err.get('row')} field={err.get('field')} -> {err.get('error')}"
+                )
+
+            if len(log["errors"]) > MAX_ERR:
+                print(f"  ... {len(log['errors']) - MAX_ERR} more")
 
     print(f"[engine] tables={total_tables} total_rows={total_rows}")
 

@@ -15,9 +15,7 @@ Rules:
 
 | ID | Task | Layer | Status | Notes |
 |----|------|------|--------|------|
-| T-001 | Add core documentation | docs | In Progress | ARCHITECTURE, DECISIONS |
-| T-002 | Define tooling document | tooling | In Progress | TOOLING.md |
-| T-003 | Define git workflow | tooling | In Progress | GIT_WORKFLOW.md |
+| T-004 | Add core unit tests | tooling | In Progress | TOOLING.md |
 
 ---
 
@@ -25,8 +23,7 @@ Rules:
 
 | ID | Task | Layer | Notes |
 |----|------|------|------|
-| T-010 | Create engine skeleton | engine | minimal pipeline |
-| T-011 | Define data folder structure | data | input/output |
+| T-005 | Functional coding audit | All | ARCHITECTURE, DECISIONS |
 | T-012 | Build first staging layer | L2 | typing + validation |
 
 ---
@@ -35,6 +32,11 @@ Rules:
 
 | ID | Task | Layer | Notes |
 |----|------|------|------|
+| T-001 | Add core documentation | docs | In Progress | ARCHITECTURE, DECISIONS |
+| T-002 | Define tooling document | tooling | In Progress | TOOLING.md |
+| T-003 | Define git workflow | tooling | In Progress | GIT_WORKFLOW.md |
+| T-010 | Create engine skeleton | engine | minimal pipeline |
+| T-011 | Define data folder structure | data | input/output |
 
 ---
 

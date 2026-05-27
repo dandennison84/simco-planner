@@ -90,20 +90,17 @@ def run_pipeline(inputs: ContractInputs) -> ContractOutputs:
     capacity = _to_float(slot.get("capacity", "0"))
 
     # ------------------------------------------------------------
-    # EO-002: bottleneck calculation (labor constraint)
+    # EO-002: bottleneck calculation (capacity-based)
     # ------------------------------------------------------------
-    labor_per_unit = 0.0
-    for r in bom_rows:
-        if r.get("product_key", "") == product_key and r.get("input_product_key", "") == "labor":
-            labor_per_unit = _to_float(r.get("input_quantity", "0"))
-            break
 
-    if labor_per_unit > 0:
-        produced = min(capacity, labor_available / labor_per_unit)
-        bottleneck = "labor" if produced < capacity else "none"
-    else:
-        produced = capacity
-        bottleneck = "none"
+    # For now: only capacity exists (no input or retail constraints yet)
+    constraints = {
+        "capacity": capacity,
+    }
+
+    # Select bottleneck as argmin
+    bottleneck = min(constraints, key=constraints.get)
+    produced = constraints[bottleneck]
 
     diagnostics_rows: list[dict] = []
 
