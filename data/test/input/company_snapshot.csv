@@ -1,2 +1,3 @@
-snapshot_key,realm_key,structure_map_key,company_level,production_speed_delta,sales_speed_delta
-1,1,1,20,0,0
+
+snapshot_key,labor_available
+1,100

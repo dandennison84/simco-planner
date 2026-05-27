@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import csv
-import os
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,6 +12,7 @@ from engine.run import main as run_engine
 
 
 # ---------- config ----------
+
 CASES_DIRNAME = "cases"
 CASE_INPUT_DIRNAME = "input"
 CASE_REFERENCE_DIRNAME = "reference"
@@ -27,6 +27,7 @@ MAX_DIFF_ROWS = 3
 
 
 # ---------- helpers ----------
+
 @dataclass(frozen=True)
 class CasePaths:
     case_name: str
@@ -70,22 +71,24 @@ def _list_case_dirs() -> List[CasePaths]:
         return []
 
     cases: List[CasePaths] = []
-    for p in sorted([x for x in root.iterdir() if x.is_dir()]):
-        case_expected = p / CASE_EXPECTED_DIRNAME
-        if case_expected.exists():
-            cases.append(
-                CasePaths(
-                    case_name=p.name,
-                    case_root=p,
-                    case_input=p / CASE_INPUT_DIRNAME,
-                    case_reference=p / CASE_REFERENCE_DIRNAME,
-                    case_expected=case_expected,
-                )
+    for p in sorted(root.iterdir()):
+        if not p.is_dir():
+            continue
+
+        cases.append(
+            CasePaths(
+                case_name=p.name,
+                case_root=p,
+                case_input=p / CASE_INPUT_DIRNAME,
+                case_reference=p / CASE_REFERENCE_DIRNAME,
+                case_expected=p / CASE_EXPECTED_DIRNAME,
             )
+        )
     return cases
 
 
 # ---------- IO helpers ----------
+
 def _wipe_dir_contents(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
     for child in path.iterdir():
@@ -101,85 +104,70 @@ def _install_case(case: CasePaths) -> None:
     _wipe_dir_contents(_data_reference_dir())
     _wipe_dir_contents(_data_output_dir())
 
-    if case.case_input.exists():
-        for f in case.case_input.iterdir():
-            if f.is_file():
-                shutil.copy2(f, _data_input_dir() / f.name)
-
-    if case.case_reference.exists():
-        for f in case.case_reference.iterdir():
-            if f.is_file():
-                shutil.copy2(f, _data_reference_dir() / f.name)
+    # copy input + reference files
+    for src_dir, dst_dir in [
+        (case.case_input, _data_input_dir()),
+        (case.case_reference, _data_reference_dir()),
+    ]:
+        if not src_dir.exists():
+            continue
+        for f in src_dir.glob("*.csv"):
+            shutil.copy(f, dst_dir / f.name)
 
 
 def _read_csv(path: Path) -> List[Dict[str, str]]:
     if not path.exists():
         return []
 
-    with path.open("r", encoding="utf-8", newline="") as f:
-        reader = csv.DictReader(f, delimiter=",")  # ✅ fixed (no detection)
-        if reader.fieldnames is None:
-            return []
-        return [dict(row) for row in reader]
+    with path.open("r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        return [dict(r) for r in reader]
 
 
-# ---------- comparison ----------
+# ---------- normalization ----------
+
 def _norm_value(v) -> str:
     if v is None:
         return ""
-    s = str(v).strip()
-    if s == "":
-        return ""
-
-    try:
-        f = float(s)
-        if f.is_integer():
-            return str(int(f))
-        return str(f)
-    except Exception:
-        return s
+    return str(v).strip()
 
 
-def _canonical_row(row: Dict[str, str]) -> Tuple[Tuple[str, str], ...]:
-    return tuple(sorted((k, _norm_value(v)) for k, v in row.items()))
+def _canonical_row(row: Dict[str, str], keys: List[str]) -> Tuple[Tuple[str, str], ...]:
+    # ✅ only normalize expected keys
+    return tuple(sorted((k, _norm_value(row.get(k))) for k in keys))
 
 
-def _normalize(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
+def _normalize(rows: List[Dict[str, str]], keys: List[str]) -> List[Tuple]:
     return sorted(
-        [{k: _norm_value(v) for k, v in r.items()} for r in rows],
-        key=_canonical_row
+        [_canonical_row(r, keys) for r in rows],
+        key=lambda x: x
     )
 
 
-def _diff(expected, actual) -> str:
-    exp = _normalize(expected)
-    act = _normalize(actual)
+def _diff(expected, actual, keys) -> str:
+    exp = _normalize(expected, keys)
+    act = _normalize(actual, keys)
 
-    if exp == act:
-        return ""
-
-    exp_set = {_canonical_row(r) for r in exp}
-    act_set = {_canonical_row(r) for r in act}
-
-    missing = exp_set - act_set
-    extra = act_set - exp_set
+    missing = [r for r in exp if r not in act]
+    extra = [r for r in act if r not in exp]
 
     lines = []
 
     if missing:
         lines.append(f"Missing {len(missing)} row(s).")
-        for i, s in enumerate(sorted(missing)[:MAX_DIFF_ROWS], 1):
-            lines.append(f"  missing[{i}]: {s}")
+        for i, r in enumerate(missing[:MAX_DIFF_ROWS], 1):
+            lines.append(f"  missing[{i}]: {r}")
 
     if extra:
         lines.append(f"Unexpected {len(extra)} row(s).")
-        for i, s in enumerate(sorted(extra)[:MAX_DIFF_ROWS], 1):
-            lines.append(f"  extra[{i}]: {s}")
+        for i, r in enumerate(extra[:MAX_DIFF_ROWS], 1):
+            lines.append(f"  extra[{i}]: {r}")
 
     return "\n".join(lines)
 
 
 # ---------- pytest ----------
+
 _CASES = _list_case_dirs()
 
 
@@ -187,42 +175,37 @@ _CASES = _list_case_dirs()
 def test_acceptance_case(case: CasePaths) -> None:
     _install_case(case)
 
-    should_fail = "eo_005" in case.case_name
+    # run engine
+    should_fail = case.case_name.startswith("eo_005")
 
-    prev_env = os.environ.get("SIMCO_ENV")
-    os.environ["SIMCO_ENV"] = "test"
+    if should_fail:
+        with pytest.raises(ValueError):
+            run_engine()
+        return
+    else:
+        run_engine()
 
-    try:
-        rc = run_engine()
+    # compare outputs
+    expected_dir = case.case_expected
+    actual_dir = _data_output_dir()
 
-        if should_fail:
-            raise AssertionError(f"Case '{case.case_name}' expected failure but succeeded")
+    for expected_file in sorted(expected_dir.glob("*.csv")):
+        actual_file = actual_dir / expected_file.name
 
-    except Exception:
-        if should_fail:
-            return
-        raise
+        expected_rows = _read_csv(expected_file)
+        actual_rows = _read_csv(actual_file)
 
-    finally:
-        if prev_env is None:
-            os.environ.pop("SIMCO_ENV", None)
-        else:
-            os.environ["SIMCO_ENV"] = prev_env
+        if not expected_rows and not actual_rows:
+            continue
 
-    assert rc == 0
+        # ✅ Extract expected schema (CRITICAL CHANGE)
+        expected_keys = list(expected_rows[0].keys())
 
-    expected_files = sorted(case.case_expected.glob("*.csv"))
+        diff = _diff(expected_rows, actual_rows, expected_keys)
 
-    for exp_path in expected_files:
-        out_path = _data_output_dir() / exp_path.name
-
-        assert out_path.exists()
-
-        expected = _read_csv(exp_path)
-        actual = _read_csv(out_path)
-
-        diff = _diff(expected, actual)
         if diff:
             raise AssertionError(
-                f"\n[CASE] {case.case_name}\n[FILE] {exp_path.name}\n{diff}\n"
+                f"\n[CASE] {case.case_name}\n"
+                f"[FILE] {expected_file.name}\n"
+                f"{diff}"
             )

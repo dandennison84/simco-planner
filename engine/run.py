@@ -2,114 +2,121 @@ from __future__ import annotations
 
 from pathlib import Path
 import os
+from typing import Dict, List, Tuple, Any
 
-from engine.io_csv import ContractInputs, load_contract_inputs, write_contract_outputs
+from engine.io_csv import ContractInputs, load_contract_inputs, write_contract_outputs, ContractOutputs
 from engine.pipeline import run_pipeline
 from engine.schema_loader import load_schema
 from engine.validator import validate_table
 
 
-# ------------------------------------------------------------
-# PURE: validate a dict of tables
-# ------------------------------------------------------------
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[1]
+
+
+def _default_env() -> str:
+    # If running under pytest, default to test environment for acceptance harness
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return "test"
+    return os.getenv("SIMCO_ENV", "runtime")
+
+
+def _schema_path(repo_root: Path) -> Path:
+    # Your tests reference Path("schema") / "schema.yml"
+    # Keep consistent with that layout.
+    return repo_root / "schema" / "schema.yml"
+
+
 def _validate_tables(
-    tables: dict[str, list[dict]],
-    tables_schema: dict,
-) -> tuple[dict[str, list[dict]], dict[str, dict]]:
-    validated = {}
-    logs = {}
+    tables: Dict[str, List[dict]],
+    schema_tables: Dict[str, Any],
+) -> Tuple[Dict[str, List[dict]], Dict[str, dict]]:
+    """
+    Pure: validate a dict of tables using schema definitions when available.
+    Returns: (validated_tables, logs_by_table)
+    """
+    validated: Dict[str, List[dict]] = {}
+    logs: Dict[str, dict] = {}
 
     for name, rows in tables.items():
-        result = validate_table(rows, tables_schema.get(name))
+        table_schema = schema_tables.get(name)
+        result = validate_table(rows, table_schema)
         validated[name] = result["rows"]
         logs[name] = result["log"]
 
     return validated, logs
 
 
-# ------------------------------------------------------------
-# SIDE EFFECT: print schema summary
-# ------------------------------------------------------------
-def _print_schema_summary(logs: dict[str, dict]) -> None:
+def _fail_if_any_errors(logs: Dict[str, dict]) -> None:
+    """
+    Enforces strict validation policy:
+    - any validation errors in any table => stop execution.
+    """
+    all_errors = []
+    for table, log in logs.items():
+        errs = log.get("errors") or []
+        if errs:
+            all_errors.append((table, errs))
+
+    if all_errors:
+        # Build a compact deterministic message
+        parts = []
+        for table, errs in all_errors:
+            parts.append(f"{table}: {len(errs)} errors")
+        summary = "; ".join(parts)
+        raise ValueError(f"Validation failed: {summary}")
+
+
+def _print_schema_summary(logs: Dict[str, dict]) -> None:
+    """
+    SIDE EFFECT: print schema validation summary (observability).
+    """
     total_rows = 0
     total_tables = 0
+    total_dropped = 0
 
-    for name, log in logs.items():
+    for name, log in sorted(logs.items(), key=lambda x: x[0]):
         total_tables += 1
-        total_rows += log["rows_read"]
+        rows_read = int(log.get("rows_read", 0))
+        rows_valid = int(log.get("rows_valid", 0))
+        rows_dropped = int(log.get("rows_dropped", 0))
+        total_rows += rows_read
+        total_dropped += rows_dropped
+        print(f"[validate] {name}: read={rows_read} valid={rows_valid} dropped={rows_dropped}")
 
-        print(f"[schema] {name}: rows={log['rows_read']} valid={log['rows_valid']}")
-
-        if log["rows_dropped"] > 0:
-            print(f"[schema][DROP] {name}: {log['rows_dropped']} row(s) removed")
-
-        if log["errors"]:
-            print(f"[schema][ERROR] {name}: {len(log['errors'])} issue(s)")
-
-            MAX_ERR = 3
-            for i, err in enumerate(log["errors"][:MAX_ERR], 1):
-                print(
-                    f"  {i}. row={err.get('row')} field={err.get('field')} -> {err.get('error')}"
-                )
-
-            if len(log["errors"]) > MAX_ERR:
-                print(f"  ... {len(log['errors']) - MAX_ERR} more")
-
-    print(f"[engine] tables={total_tables} total_rows={total_rows}")
+    print(f"[validate] tables={total_tables} rows_read={total_rows} rows_dropped={total_dropped}")
 
 
-# ------------------------------------------------------------
-# MAIN
-# ------------------------------------------------------------
-def main() -> int:
-    repo_root = Path(__file__).resolve().parents[1]
+def main(env: str | None = None) -> int:
+    repo_root = _repo_root()
+    env = env or _default_env()
 
-    env = os.getenv("SIMCO_ENV", "runtime")
-    data_dir = repo_root / "data" / env
+    data_root = repo_root / "data" / env
+    input_dir = data_root / "input"
+    reference_dir = data_root / "reference"
+    output_dir = data_root / "output"
 
-    input_dir = data_dir / "input"
-    reference_dir = data_dir / "reference"
-    output_dir = data_dir / "output"
+    schema = load_schema(_schema_path(repo_root))
+    schema_tables = schema.get("tables", {}) or {}
 
-    schema_path = repo_root / "schema" / "schema.yml"
+    inputs = load_contract_inputs(input_dir=input_dir, reference_dir=reference_dir)
 
-    # --- Load inputs ---
-    inputs = load_contract_inputs(
-        input_dir=input_dir,
-        reference_dir=reference_dir,
-    )
+    # Validate input + reference with schema when available
+    validated_inputs, logs_in = _validate_tables(inputs.input_tables, schema_tables)
+    validated_refs, logs_ref = _validate_tables(inputs.reference_tables, schema_tables)
 
-    # --- Load schema ---
-    schema = load_schema(schema_path)
-    tables_schema = schema.get("tables", {})
+    # Merge logs for summary + strict fail
+    logs = {**logs_in, **logs_ref}
+    _print_schema_summary(logs)
+    _fail_if_any_errors(logs)
 
-    # --- Validate all tables (pure) ---
-    validated_input_tables, input_logs = _validate_tables(
-        inputs.input_tables, tables_schema
-    )
+    validated_contract = ContractInputs(input_tables=validated_inputs, reference_tables=validated_refs)
 
-    validated_reference_tables, reference_logs = _validate_tables(
-        inputs.reference_tables, tables_schema
-    )
+    outputs: ContractOutputs = run_pipeline(validated_contract)
 
-    # --- Print summary (side effect boundary) ---
-    _print_schema_summary({**input_logs, **reference_logs})
+    write_contract_outputs(outputs, output_dir=output_dir)
 
-    # --- Rebuild validated inputs (pure) ---
-    validated_inputs = ContractInputs(
-        input_tables=validated_input_tables,
-        reference_tables=validated_reference_tables,
-    )
-
-    # --- Run pipeline (pure) ---
-    outputs = run_pipeline(validated_inputs)
-
-    # --- Write outputs (side effect) ---
-    write_contract_outputs(
-        outputs=outputs,
-        output_dir=output_dir,
-    )
-
+    print(f"[run] wrote outputs to: {output_dir}")
     return 0
 
 
