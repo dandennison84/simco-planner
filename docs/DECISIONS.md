@@ -83,6 +83,9 @@ Markdown strikethrough (optional for the *Decision* cell when superseded):
 | 22 | ✅ |  |  | Stock vs Flow Separation | Structural values risk contaminating flow logic | Must maintain layer integrity | Stock/structure values must not be used in throughput or economics |
 | 23 | ✅ |  |  | Assignment Driven Throughput | Structure previously used for capacity directly | Assignment defines production | Throughput must be driven exclusively by assignment surfaces |
 | 24 | ✅ |  |  | Generator Discipline | Row expansion logic implicit | Expansion must be controlled | Any component increasing rows must explicitly declare schema and expansion cause |
+| 25 | ✅ |  |  | Scenario Model | Scenario logic embedded in tool-specific inputs | Need reusable, tool-independent state derivation | Scenarios are defined as baseline snapshot plus scenario_delta applied as partial updates |
+| 26 | ✅ |  |  | Execution Identity | Snapshot and scenario identities conflict during execution | Pipeline must remain simple and deterministic | Engine generates a unique state_key for execution and does not rely on snapshot_key or scenario_key internally |
+| 27 | ✅ |  |  | Flow Policy Layer | Internal resource routing not explicitly modeled | Flow behavior must be separated from structure and sales | Introduce a flow policy stage between assignment and throughput to control internal resource allocation |
 
 ---
 

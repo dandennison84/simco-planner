@@ -31,29 +31,61 @@ The engine never reads Excel directly.
 
 The engine operates as a layered transformation system:
 
-INPUT  
-(company_snapshot, structure_map, assignment)  
-        ↓  
-VALIDATION  
-(schema + invariants)  
-        ↓  
-STRUCTURE  
-(building capacity & topology)  
-        ↓  
-ALLOCATION  
-(slot → product × quality split)  
-        ↓  
-THROUGHPUT  
-(quantity resolution)  
-        ↓  
-ECONOMICS  
-(value applied to flow)  
-        ↓  
-DIAGNOSTICS  
-(facts → signals → guidance)  
-        ↓  
-OUTPUT  
-(diagnostics, guidance, evidence)
+INPUT
+(company_snapshot, structure_map, assignment, scenario_delta, flow_policy)
+        ↓
+VALIDATION
+(schema + invariants)
+        ↓
+SCENARIO RESOLUTION
+(baseline + scenario_delta → resolved state)
+        ↓
+STRUCTURE
+(building capacity & topology)
+        ↓
+ALLOCATION
+(slot → product × quality split)
+        ↓
+FLOW POLICY
+(internal routing + sourcing intent)
+        ↓
+THROUGHPUT
+(quantity resolution)
+        ↓
+ECONOMICS
+(value applied to flow)
+        ↓
+DIAGNOSTICS
+(facts → signals → guidance)
+        ↓
+OUTPUT
+
+---
+
+## Flow Policy
+
+Flow policy defines how produced resources are used internally.
+
+- it controls routing between products
+- it defines sourcing behavior (make vs buy)
+- it determines priority of consumption
+
+Flow policy does not modify structure, assignment, or production.
+It only affects how output is allocated before throughput resolution.
+
+---
+
+## Scenario Resolution
+
+Scenarios are defined as a baseline snapshot combined with a set of deltas.
+
+- scenario_delta defines explicit field-level modifications
+- only specified fields are updated
+- all other values are inherited from the baseline
+
+This produces a resolved state used for execution.
+
+The pipeline operates only on resolved state and does not distinguish between baseline and scenario inputs.
 
 ---
 

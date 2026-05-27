@@ -140,3 +140,82 @@ slot_product_assignment:
       split_fraction:
         type: float
         required: true
+
+sales_strategy:
+    version: 1
+    intent: "Defines how produced output is cleared across sales channels per snapshot, product, and quality level"
+
+    fields:
+
+      snapshot_key:
+        type: int
+        required: true
+        constraints:
+          min: 1
+
+      product_key:
+        type: int
+        required: true
+        constraints:
+          min: 1
+
+      quality_level:
+        type: int
+        required: true
+        constraints:
+          min: 0
+
+      sales_channel_key:
+        type: int
+        required: true
+        constraints:
+          min: 1
+
+      allocation_frac:
+        type: float
+        required: false
+        constraints:
+          min: 0
+          max: 1
+
+      allocation_units_per_hour:
+        type: float
+        required: false
+        constraints:
+          min: 0
+
+      contract_discount_frac:
+        type: float
+        required: false
+        constraints:
+          min: 0
+
+scenario_delta:
+    version: 1
+    intent: "Defines partial field-level modifications to a baseline snapshot to create a scenario-specific state"
+
+    fields:
+
+      scenario_key:
+        type: int
+        required: true
+        constraints:
+          min: 1
+
+      target_table:
+        type: string
+        required: true
+
+      target_key:
+        type: string
+        required: true
+        notes: "Serialized key identifying the row at the table grain (e.g., slot_key=3)"
+
+      field_name:
+        type: string
+        required: true
+
+      value:
+        type: string
+        required: true
+        notes: "Serialized value representing the updated field value"          
