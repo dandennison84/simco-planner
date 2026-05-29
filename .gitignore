@@ -230,3 +230,6 @@ __marimo__/
 /data/output/*.csv
 /data/input/*.csv
 /data/reference/*.csv
+/template/PlannerTemplate.xlsb
+/runtime/
+/data/runtime/
