@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Dict, List
 
+from engine.allocation_policy import apply_allocation_policy
+
 
 def _k(x) -> str:
     return ("" if x is None else str(x)).strip()
@@ -51,30 +53,31 @@ def apply_flow_policy(
         ql = _k(r.get("quality_level"))
         if pk == "" or ql == "":
             raise ValueError("production_intent missing product_key or quality_level")
-        produced = _to_float_strict(r.get("units_produced_per_hour"), f"production_intent[{pk},{ql}].units_produced_per_hour")
+        produced = _to_float_strict(
+            r.get("units_produced_per_hour"),
+            f"production_intent[{pk},{ql}].units_produced_per_hour",
+        )
         prod[(pk, ql)] = produced
 
-    # group policy by (source_product_key, source_quality_level?) -> for now quality-agnostic unless provided
-    # If flow_policy includes quality, you can extend later. For now: apply per source_product_key to all qualities.
+    # invariant: no duplicate flow_policy rows
+    seen = set()
+    for p in flow_policy_rows:
+        key = (
+            _k(p.get("source_product_key")),
+            _k(p.get("target_product_key")),
+            _to_int_strict(p.get("priority"), "priority"),
+        )
+        if key in seen:
+            raise ValueError(f"Duplicate flow_policy row: {key}")
+        seen.add(key)
+
+    # group policy by source product (quality-agnostic for now)
     grouped: Dict[str, List[Dict]] = {}
     for p in flow_policy_rows:
         spk = _k(p.get("source_product_key"))
         tpk = _k(p.get("target_product_key"))
         if spk == "" or tpk == "":
             raise ValueError("flow_policy missing source_product_key or target_product_key")
-
-        # priority required
-        pr = _to_int_strict(p.get("priority"), f"flow_policy[{spk}->{tpk}].priority")
-
-        # allocation shape: xor
-        frac_raw = p.get("allocation_frac")
-        units_raw = p.get("allocation_units_per_hour")
-
-        has_frac = _k(frac_raw) != ""
-        has_units = _k(units_raw) != ""
-        if has_frac == has_units:
-            raise ValueError(f"flow_policy[{spk}->{tpk}] must provide exactly one of allocation_frac or allocation_units_per_hour")
-
         grouped.setdefault(spk, []).append(p)
 
     allocations: List[Dict] = []
@@ -85,44 +88,29 @@ def apply_flow_policy(
         if not policy:
             continue
 
-        remaining = produced
-
-        # deterministic: sort by priority asc, then target_product_key
-        policy_sorted = sorted(
-            policy,
-            key=lambda p: (
-                _to_int_strict(p.get("priority"), "priority"),
-                _k(p.get("target_product_key")),
+        results = apply_allocation_policy(
+            produced=produced,
+            rows=policy,
+            priority_field="priority",
+            units_field="allocation_units_per_hour",
+            frac_field="allocation_frac",
+            priority_label="flow_policy.priority",
+            policy_label_fn=lambda row: (
+                f"flow_policy[{_k(row.get('source_product_key'))}->{_k(row.get('target_product_key'))}]"
             ),
         )
 
-        for p in policy_sorted:
-            tpk = _k(p.get("target_product_key"))
-            frac_raw = p.get("allocation_frac")
-            units_raw = p.get("allocation_units_per_hour")
+        for row, allocated in results:
+            if allocated == 0:
+                continue
 
-            if _k(units_raw) != "":
-                desired = _to_float_strict(units_raw, f"flow_policy[{pk}->{tpk}].allocation_units_per_hour")
-            else:
-                frac = _to_float_strict(frac_raw, f"flow_policy[{pk}->{tpk}].allocation_frac")
-                if frac < 0 or frac > 1:
-                    raise ValueError(f"flow_policy[{pk}->{tpk}].allocation_frac out of [0,1]: {frac}")
-                desired = frac * produced
-
-            allocated = desired if desired <= remaining else remaining
-            remaining -= allocated
-
-            if allocated != 0:
-                allocations.append(
-                    {
-                        "source_product_key": pk,
-                        "source_quality_level": ql,
-                        "target_product_key": tpk,
-                        "allocated_units_per_hour": str(allocated),
-                    }
-                )
-
-            if remaining <= 0:
-                break
+            allocations.append(
+                {
+                    "source_product_key": pk,
+                    "source_quality_level": ql,
+                    "target_product_key": _k(row.get("target_product_key")),
+                    "allocated_units_per_hour": str(allocated),
+                }
+            )
 
     return allocations

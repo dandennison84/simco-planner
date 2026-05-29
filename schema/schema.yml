@@ -2,10 +2,9 @@ tables:
 
   company_snapshot:
     version: 1
-    intent: "Defines scenario identity, context, and global modifiers for the engine"
+    intent: Defines scenario identity, context, and global modifiers for the engine
 
     fields:
-
       snapshot_key:
         type: int
         required: true
@@ -39,168 +38,156 @@ tables:
         type: float
         required: true
 
-company_observed:
+
+  company_observed:
     version: 1
-    intent: "Observed/actual performance metrics for validation and analysis"
+    intent: Observed/actual performance metrics for validation and analysis
 
     fields:
-
       snapshot_key:
         type: int
         required: true
-        constraints:
-          min: 1
 
       sales_per_day:
         type: float
-        required: false
 
       net_income_per_day:
         type: float
-        required: false
 
       capital_buildings:
         type: float
-        required: false
 
       capital_cip:
         type: float
-        required: false       
 
-structure_map:
+
+  structure_map:
     version: 1
-    intent: "Defines the building composition of a map at slot-level granularity"
+    intent: Defines the building composition of a map at slot-level granularity
 
     fields:
-
       map_structure_key:
         type: int
         required: true
-        constraints:
-          min: 1
 
       slot_key:
         type: int
         required: true
-        constraints:
-          min: 1
 
       slot_state_key:
         type: int
         required: true
-        constraints:
-          min: 1
 
       building_key:
         type: int
         required: true
-        constraints:
-          min: 1
 
       building_level:
         type: int
         required: true
-        constraints:
-          min: 1
 
       robots_installed:
         type: string
         required: true
 
-slot_product_assignment:
+      capacity:
+        type: float
+        required: false   # temporary override until structure model implemented
+
+
+  slot_product_assignment:
     version: 1
-    intent: "Defines how each building slot's capacity is allocated across product and quality-level outputs over time"
+    intent: Defines how each building slot's capacity is allocated
 
     fields:
-
       map_structure_key:
         type: int
         required: true
-        constraints:
-          min: 1
 
       slot_key:
         type: int
         required: true
-        constraints:
-          min: 1
 
       product_key:
         type: int
         required: true
-        constraints:
-          min: 1
 
       quality_level:
         type: int
         required: true
-        constraints:
-          min: 0
 
       split_fraction:
         type: float
         required: true
 
-sales_strategy:
+
+  flow_policy:
     version: 1
-    intent: "Defines how produced output is cleared across sales channels per snapshot, product, and quality level"
+    intent: Defines internal routing between products prior to throughput resolution
 
     fields:
+      source_product_key:
+        type: int
+        required: true
 
+      target_product_key:
+        type: int
+        required: true
+
+      priority:
+        type: int
+        required: true
+
+      allocation_units_per_hour:
+        type: float
+
+      allocation_frac:
+        type: float
+
+
+  sales_strategy:
+    version: 1
+    intent: Defines how produced output is cleared across sales channels
+
+    fields:
       snapshot_key:
         type: int
         required: true
-        constraints:
-          min: 1
 
       product_key:
         type: int
         required: true
-        constraints:
-          min: 1
 
       quality_level:
         type: int
         required: true
-        constraints:
-          min: 0
 
       sales_channel_key:
         type: int
         required: true
-        constraints:
-          min: 1
 
-      allocation_frac:
-        type: float
-        required: false
-        constraints:
-          min: 0
-          max: 1
+      priority:
+        type: int
+        required: true
 
       allocation_units_per_hour:
         type: float
-        required: false
-        constraints:
-          min: 0
+
+      allocation_frac:
+        type: float
 
       contract_discount_frac:
         type: float
-        required: false
-        constraints:
-          min: 0
 
-scenario_delta:
+
+  scenario_delta:
     version: 1
-    intent: "Defines partial field-level modifications to a baseline snapshot to create a scenario-specific state"
+    intent: Defines partial field-level modifications to create a scenario
 
     fields:
-
       scenario_key:
         type: int
         required: true
-        constraints:
-          min: 1
 
       target_table:
         type: string
@@ -209,7 +196,6 @@ scenario_delta:
       target_key:
         type: string
         required: true
-        notes: "Serialized key identifying the row at the table grain (e.g., slot_key=3)"
 
       field_name:
         type: string
@@ -218,4 +204,133 @@ scenario_delta:
       value:
         type: string
         required: true
-        notes: "Serialized value representing the updated field value"          
+
+
+  # ==========================================================
+  # INTERNAL PIPELINE TABLES (NEW)
+  # ==========================================================
+
+  slot_capacity:
+    version: 1
+    intent: Derived slot-level production capacity
+
+    fields:
+      slot_key:
+        type: int
+
+      capacity_per_hour:
+        type: float
+
+      state_key:
+        type: string
+
+
+  production_intent:
+    version: 1
+    intent: Product output before flow routing
+
+    fields:
+      product_key:
+        type: int
+
+      quality_level:
+        type: int
+
+      units_produced_per_hour:
+        type: float
+
+      state_key:
+        type: string
+
+
+  flow_allocation:
+    version: 1
+    intent: Internal routing of production between products
+
+    fields:
+      source_product_key:
+        type: int
+
+      source_quality_level:
+        type: int
+
+      target_product_key:
+        type: int
+
+      allocated_units_per_hour:
+        type: float
+
+
+  throughput:
+    version: 1
+    intent: Final resolved production quantities after routing
+
+    fields:
+      product_key:
+        type: int
+
+      quality_level:
+        type: int
+
+      units_produced_per_hour:
+        type: float
+
+      units_routed_out_per_hour:
+        type: float
+
+      units_routed_in_per_hour:
+        type: float
+
+      units_available_per_hour:
+        type: float
+
+      state_key:
+        type: string
+
+
+  sales_allocation:
+    version: 1
+    intent: Allocation of finished goods to sales channels
+
+    fields:
+      snapshot_key:
+        type: int
+
+      product_key:
+        type: int
+
+      quality_level:
+        type: int
+
+      sales_channel_key:
+        type: int
+
+      allocated_units_per_hour:
+        type: float
+
+      state_key:
+        type: string
+
+
+  diagnostics:
+    version: 1
+    intent: Final output projection for reporting and UI consumption
+
+    fields:
+      snapshot_key:
+        type: int
+
+      product_key:
+        type: int
+
+      produced_quantity:
+        type: float
+
+      retail_quantity:
+        type: float
+
+      exchange_quantity:
+        type: float
+
+      bottleneck:
+        type: string

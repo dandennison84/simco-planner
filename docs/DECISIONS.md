@@ -86,6 +86,8 @@ Markdown strikethrough (optional for the *Decision* cell when superseded):
 | 25 | ✅ |  |  | Scenario Model | Scenario logic embedded in tool-specific inputs | Need reusable, tool-independent state derivation | Scenarios are defined as baseline snapshot plus scenario_delta applied as partial updates |
 | 26 | ✅ |  |  | Execution Identity | Snapshot and scenario identities conflict during execution | Pipeline must remain simple and deterministic | Engine generates a unique state_key for execution and does not rely on snapshot_key or scenario_key internally |
 | 27 | ✅ |  |  | Flow Policy Layer | Internal resource routing not explicitly modeled | Flow behavior must be separated from structure and sales | Introduce a flow policy stage between assignment and throughput to control internal resource allocation |
+| 28 | ✅      |            |            | Sales Strategy Model   | Sales demand modeled externally created implicit behavior and limited flexibility | Demand-based models conflated external conditions with allocation decisions; required explicit, table-driven behavior | Replace sales_demand with sales_strategy to define explicit, deterministic output allocation based on policy rather than demand |
+| 29 | ✅      |            |            | Flow vs Sales Strategy Separation | Internal routing and external allocation share mechanics but represent different system concerns | Both layers use priority-based allocation and deterministic execution but operate on different domains        | Maintain strict separation between flow_policy (internal resource routing) and sales_strategy (external output allocation)        |
 
 ---
 
