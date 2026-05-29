@@ -1,0 +1,55 @@
+Building Key,Building Name,Building Category Key,Baseline Wage,Baseline Build Time,Baseline Robots,Max Level,Baseline Reference Value
+1,Academy,18,0,8,,,65550
+2,Aerospace Electronics,8,725,6,38,,141450
+3,Aerospace Factory,8,587,6,30,,106950
+4,Automotive R&D,18,552,6,,,138000
+5,Bakery,2,449,5,22,,37950
+6,Bank,19,0,8,,,138000
+7,Beach Market,21,241,2,,,10350
+8,Beverage Factory,2,241,2,9,,13800
+9,Breeding Laboratory,18,414,5,,,96600
+10,Car Dealership,14,380,3,,,20700
+11,Car Factory,7,449,6,22,,93150
+12,Castle,19,0,12,,3,138000
+13,Catering,2,656,4,34,,103500
+14,Chemistry Laboratory,18,414,5,,,96600
+15,Concrete Plant,3,380,5,17,,58650
+16,Construction Factory,3,483,6,24,,72450
+17,Electronics Factory,6,380,5,17,,82800
+18,Electronics Store,11,173,1,,,17250
+19,Factory,9,414,3,20,,48300
+20,Farm,1,104,1,1,,6900
+21,Fashion & Design,18,449,2,,,72450
+22,Fashion Factory,4,138,2,3,,13800
+23,Fashion Store,13,311,3,,,17250
+24,Food Processing Plant,2,380,6,17,,86250
+25,Forest Nursery,1,79,2,1,,17250
+26,Gas Station,15,345,1,,,24150
+27,General Contractor,3,345,2,15,,48300
+28,Grocery Store,10,138,1,,,10350
+29,Halloween Market,21,207,2,,,13800
+30,Hangar,8,759,3,40,,100050
+31,Hardware Store,12,173,1,,,13800
+32,Kitchen,18,518,4,,,82800
+33,Lake,21,0,12,,3,138000
+34,Launch Pad,18,518,9,,,124200
+35,Mill,1,380,3,17,,27600
+36,Mine,9,276,4,11,,24150
+37,Oil Rig,9,518,4,26,,69000
+38,Park,21,0,12,,3,138000
+39,Physics Laboratory,18,587,7,,,165600
+40,Plant Research Center,18,449,5,,,103500
+41,Power Plant,5,414,3,20,,51750
+42,Propulsion Factory,8,621,7,32,,103500
+43,Quarry,9,276,3,11,,24150
+44,Ranch,1,138,2,3,,10350
+45,Refinery,5,483,4,24,,69000
+46,Restaurant,16,587,3,,,89700
+47,Sales Office,17,587,2,,,62100
+48,Shipping Depot,9,311,3,13,,51750
+49,Slaughterhouse,2,414,4,20,,20700
+50,Software R&D,18,587,3,,,65550
+51,Spring Market,21,241,1,,,6900
+52,Vertical Integration Facility,8,759,3,40,,113850
+53,Water Reservoir,9,345,2,15,,20700
+54,XMAS Market,21,241,2,,,17250

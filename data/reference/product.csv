@@ -1,0 +1,152 @@
+Product Name,Product Key,Building Key,Baseline Output,Transport per Unit
+Aerospace Research,1,34,0,725
+Aluminium,2,19,1,119.79
+Apple Cider,3,8,1,36.56
+Apple Icecream,4,24,1,32.14
+Apple Pie,5,5,2,5.98
+Apples,6,20,1,202.19
+Attitude Control,7,2,1,2.72
+Automotive Research,8,4,0,
+Basic Interior,9,11,2,31.89
+Batteries,10,17,1,25.26
+Bauxite,11,36,1,84.94
+BFR,12,52,2000,0.21
+Bread,13,5,1,11.96
+Breeding Research,14,9,0,
+Bricks,15,15,1,367.35
+Bulldozer,16,11,5,5.58
+Butter,17,24,1,13.78
+Car Body,18,11,2,23.92
+Carbon Composite,19,19,1,68.45
+Carbon Fibers,20,45,0.1,245.11
+Cement,21,15,1,298.47
+Cheese,22,24,1,5.51
+Chemicals,23,19,1,220.53
+Chemistry Research,24,14,0,
+Chocolate,25,24,1,3.21
+Chocolate Icecream,26,24,1,32.14
+Clay,27,43,1,949.32
+Cockpit,28,2,1,2.26
+Cocktails,29,13,2,0.52
+Cocoa,30,20,0.1,169.84
+Coffee Beans,31,20,0.1,412.46
+Coffee Powder,32,35,1,22.96
+Combustion Engine,33,42,2,5.6
+Construction Units,34,27,1,0.99
+Cotton,35,20,0.5,258.8
+Cows,36,44,1,37.68
+Cream Egg,37,24,1,11.48
+Crude Oil,38,37,1,36.54
+Diesel,39,45,1,115.13
+Displays,40,17,1,32.14
+Dough,41,5,1,11.96
+Dress,42,22,1,150.7
+Easter Bunny,43,24,1,3.67
+Economy Car,44,11,5,13.95
+Economy E-Car,45,11,5,19.93
+Eggs,46,44,0.1,316.47
+Electric Motor,47,42,2,30.78
+Electronic Components,48,17,1,41.33
+Electronics Research,49,39,0,
+Energy Research,50,39,0,
+Ethanol,51,8,1,60.94
+Fabric,52,22,1,241.12
+Fashion Research,53,21,0,
+Flight Computer,54,2,1,2.26
+Flour,55,35,0.1,87.25
+Fodder,56,35,1,284.7
+Frozen Pizza,57,24,1,9.18
+Fuselage,58,3,2,3.3
+Ginger Beer,59,8,1,73.13
+Glass,60,19,1,128.35
+Gloves,61,22,1,143.17
+Gold Ore,62,36,10,49.96
+Golden Bars,63,19,1000,29.95
+Grain,64,20,0.1,808.75
+Grapes,65,20,1,161.75
+Hamburger,66,13,2,0.52
+Handbags,67,22,1,67.82
+Heat Shield,68,3,1,12.01
+High Grade E-Comps,69,17,1,1.84
+Ion Drive,70,42,1,0.56
+Iron Ore,71,36,1,159.89
+Jack O'Lantern,72,17,1,284.7
+Jet Engine,73,42,1,0.84
+Jumbo Jet,74,30,2000,0.06
+Laptops,75,17,2,9.18
+Lasagne,76,13,2,1.56
+Leather,77,44,1,30.14
+Limestone,78,43,1,699.5
+Luxury Car,79,11,5,1.99
+Luxury Car Interior,80,11,2,19.93
+Luxury E-Car,81,11,5,3.99
+Luxury Jet,82,30,1000,0.17
+Luxury Watch,83,22,1,18.84
+Materials Research,84,14,0,
+Meat Balls,85,13,2,1.04
+Methane,86,37,1,48.72
+Milk,87,44,1,120.56
+Minerals,88,36,1,104.92
+Mining Research,89,39,0,
+Monitors,90,17,2,18.37
+Necklace,91,22,1,41.44
+On-Board Computer,92,17,1,13.78
+Orange Juice,93,8,1,91.41
+Oranges,94,20,1,186.01
+Orbital Booster,95,3,100,1.5
+Pasta,96,24,1,18.37
+Petrol,97,45,1,111.41
+Pigs,98,44,1,82.89
+Planks,99,16,1,115.13
+Plant Research,100,40,0,
+Plastic,101,45,1,204.25
+Power,102,41,0,2566.94
+Processors,103,17,1,9.18
+Propellant Tank,104,3,1,4.51
+Pumpkin,105,20,1,4.12
+Pumpkin Soup,106,13,2,2.09
+Quadcopter,107,2,2,12.45
+Ramadan Sweets,108,24,1,5.05
+Recipes,109,32,0,
+Reinforced Concrete,110,15,1,188.27
+Robots,111,17,2,2.3
+Rocket Engine,112,42,1,0.28
+Rocket Fuel,113,45,1,77.99
+Salad,114,13,2,2.09
+Samosa,115,13,2,1.83
+Sand,116,43,1,1249.11
+Satellite,117,2,10,0.11
+Sauce,118,13,2,0.78
+Sausages,119,49,0.1,77.01
+Seeds,120,20,0.1,889.63
+Silicon,121,19,1,154.02
+Single-Engine Plane,122,30,100,1.48
+Smart Phones,123,17,2,11.48
+Sneakers,124,22,1,173.31
+Software,125,50,0,
+Solid Fuel Booster,126,42,1,0.28
+Starship,127,3,100,0.3
+Steak,128,49,1,25.67
+Steel,129,19,1,192.52
+Steel Beams,130,16,1,129.98
+Stiletto Heel,131,22,1,97.96
+Sub-Orbital 2nd Stage,132,3,20,3
+Sub-Orbital Rocket,133,52,20,0.63
+Sugar,134,24,1,41.33
+Sugarcane,135,20,0.1,647
+Tablets,136,17,1,11.48
+Televsions,137,17,2,16.07
+Tools,138,16,1,26
+Transport,139,48,0,3173.95
+Tree,140,25,1,1
+Truck,141,11,5,4.78
+Underwear,142,22,1,207.21
+Vegetable Oil,143,24,1,36.74
+Vegetables,144,20,0.2,283.06
+Water,145,53,0,1626.43
+Windows,146,16,1,16.71
+Wing,147,3,2,8.11
+Witch Costume,148,22,1,120.56
+Wood,149,20,1,76.83
+XMAS Crackers,150,19,0.5,222.47
+XMAS Ornament,151,19,0.5,179.69

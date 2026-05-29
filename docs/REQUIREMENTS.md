@@ -101,6 +101,7 @@ REQ-066 | TRUE | System must compute modeled versus observed profit gap as a per
 REQ-067 | TRUE | System must flag when modeled versus observed gap exceeds a defined threshold | Users must quickly detect unreliable modeling conditions | Validation | Diagnostics | Uses ModeledObservedGapShareThreshold
 REQ-068 | TRUE | System must compute total transport usage against defined threshold levels | Users must identify excessive logistics pressure | Validation | Logistics | Compare to TransportPressureUnitsPerDayThreshold
 REQ-069 | TRUE | System must flag when transport usage is concentrated in a single product beyond defined threshold | Users must detect operational risk | Validation | Logistics | Uses TransportConcentrationShareThreshold
+REQ-070 | TRUE | Production input requirements must round up fractional input quantities to the nearest whole unit based on total production | Prevents underconsumption of discrete inputs and ensures correct economic modeling of BOM usage | Domain Rule | Production | RequiredInputUnits = CEILING(InputQty × OutputUnits)
 
 ---
 

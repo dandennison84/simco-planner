@@ -1,0 +1,4 @@
+Sales Channel Name,Sales Channel Key,Price Type,Fee Fraction,Transport Type,Transport Multiplier,Contract Discount Allowed,Uses Retail Capacity
+Exchange,1,Exchange,0.04,Full,1,FALSE,FALSE
+Contract,2,Exchange,0,Reduced,0.5,TRUE,FALSE
+Retail,3,Retail,0,None,0,FALSE,TRUE

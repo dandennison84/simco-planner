@@ -1,0 +1,10 @@
+Executive Role Key,Requires Academy,Required Academy Level,Unlocked by Player Level
+1,FALSE,,15
+2,FALSE,,15
+3,FALSE,,15
+4,FALSE,,15
+5,FALSE,,15
+6,TRUE,5,15
+7,TRUE,10,15
+8,TRUE,15,15
+9,TRUE,20,15

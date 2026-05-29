@@ -1,0 +1,22 @@
+Building Category Name,Building Category Key,Building Subcategory Name,Counts Toward AO,Economic Role Key
+Production,1,Agriculture,TRUE,1
+Production,2,Food,TRUE,1
+Production,3,Construction,TRUE,1
+Production,4,Fashion,TRUE,1
+Production,5,Energy,TRUE,1
+Production,6,Electronics,TRUE,1
+Production,7,Automotive,TRUE,1
+Production,8,Aerospace,TRUE,1
+Production,9,Resources,TRUE,1
+Retail,10,Grocery/Food,TRUE,2
+Retail,11,Electronics Retail,TRUE,2
+Retail,12,Hardware/Construction,TRUE,2
+Retail,13,Fashion Retail,TRUE,2
+Retail,14,Automotive Retail,TRUE,2
+Retail,15,Fuel Retail,TRUE,2
+Retail,16,Restaurant,TRUE,2
+Sales,17,General,TRUE,2
+Research,18,Various Research,TRUE,1
+Recreation,19,Special Recreational,TRUE,3
+Special,20,Other,TRUE,3
+Season,21,Special Seasonal,FALSE,1

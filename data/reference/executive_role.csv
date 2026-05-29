@@ -1,0 +1,11 @@
+
+Executive Role Name,Executive Role Key,Skill Name,Max Slots per Player,Is C-Suite,Parent Role Key
+COO,1,Management,1,TRUE,
+CFO,2,Accounting,1,TRUE,
+CMO,3,Management,1,TRUE,
+CTO,4,Science,1,TRUE,
+Staff,5,None,0,FALSE,
+COO Apprentice,6,Management,1,FALSE,1
+CFO Apprentice,7,Accounting,1,FALSE,2
+CMO Apprentice,8,Management,1,FALSE,3
+CTO Apprentice,9,Science,1,FALSE,4
