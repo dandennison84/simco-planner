@@ -229,6 +229,6 @@ __marimo__/
 /reports/*.xlsx
 /data/output/*.csv
 /data/input/*.csv
-/template/PlannerTemplate.xlsb
+/template/PlannerTemplate.xlsm
 /runtime/
 /data/runtime/

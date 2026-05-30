@@ -13,8 +13,8 @@ import win32com.client as win32
 # =============================================================================
 ROOT = Path(__file__).resolve().parent.parent
 
-TEMPLATE_SRC = ROOT / "template" / "Template.xlsb"
-TEMPLATE_DST = ROOT / "template" / "PlannerTemplate.xlsb"
+TEMPLATE_SRC = ROOT / "template" / "Template.xlsm"
+TEMPLATE_DST = ROOT / "template" / "PlannerTemplate.xlsm"
 
 REF_DIR = ROOT / "data" / "reference"
 
@@ -54,11 +54,15 @@ LOOKUPS = [
 # Validation targets
 # =============================================================================
 VALIDATIONS = [
-    ("tblCompany", "Realm", "nr_RealmNames"),
+    ("tblCompany", "Realm Name", "nr_RealmNames"),
     ("tblMapStructure", "Building Name", "nr_BuildingNames"),
-    ("tblProductionPlan", "Product", "nr_ProductNames"),
-    ("tblSalesPlan", "Product", "nr_ProductNames"),
+    ("tblProductionPlan", "Product Name", "nr_ProductNames"),
+    ("tblSalesPlan", "Product Name", "nr_ProductNames"),
     ("tblSalesPlan", "Sales Channel", "nr_SalesChannelNames"),
+    ("tblOverrideExchangePrices", "Realm Name", "nr_RealmNames"),
+    ("tblOverrideExchangePrices", "Product Name", "nr_ProductNames"),
+    ("tblOverrideRetailPrices", "Realm Name", "nr_RealmNames"),
+    ("tblOverrideRetailPrices", "Product Name", "nr_ProductNames"),
 ]
 
 
@@ -197,7 +201,7 @@ def main():
 
         wb.Save()
 
-        print("✅ PlannerTemplate.xlsb generated successfully")
+        print("✅ PlannerTemplate.xlsm generated successfully")
 
     finally:
         wb.Close(SaveChanges=True)

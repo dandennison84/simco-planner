@@ -18,17 +18,19 @@ DATA_RUNTIME_DIR = PROJECT_ROOT / "data" / "runtime"
 INPUT_DIR = DATA_RUNTIME_DIR / "input"
 OUTPUT_DIR = DATA_RUNTIME_DIR / "output"
 
-TEMPLATE_FILE = TEMPLATE_DIR / "PlannerTemplate.xlsb"
-RUNTIME_FILE = RUNTIME_DIR / "Planner.xlsb"
+TEMPLATE_FILE = TEMPLATE_DIR / "PlannerTemplate.xlsm"
+RUNTIME_FILE = RUNTIME_DIR / "Planner.xlsm"
 
 # User-editable ListObjects to clear in the generated workbook.
 # Keep these aligned with your actual Excel table names.
 TABLES_TO_CLEAR = {
     "Inputs": [
-        "tblCompany",
-        "tblMapStructure",
-        "tblProductionPlan",
-        "tblSalesPlan",
+        #"tblCompany",
+        #"tblMapStructure",
+        #"tblProductionPlan",
+        #"tblSalesPlan",
+        #"tblOverrideExchangePrices",
+        #"tblOverrideRetailPrices"
     ],
     "Outputs": [
         # Add your output tables here once finalized, for example:
@@ -73,7 +75,7 @@ def clear_listobject_keep_one_blank_row(lo) -> None:
     - table style / formatting
     - one blank data row for user entry
 
-    This relies on Excel COM and therefore works with .xlsb.
+    This relies on Excel COM and works with .xlsx / .xlsm / .xlsb.
     """
     # Ensure at least one data row exists
     if lo.ListRows.Count == 0:
@@ -89,16 +91,16 @@ def clear_listobject_keep_one_blank_row(lo) -> None:
         lo.ListRows(lo.ListRows.Count).Delete()
 
 
-def reset_workbook_xlsb(path: Path) -> None:
+def reset_workbook_xlsm(path: Path) -> None:
     """
     Windows-only path using installed Excel via COM automation.
-    Preserves VBA, buttons, shapes, Power Query, and .xlsb format.
+    Preserves VBA, buttons, shapes, Power Query, and .xlsm format.
     """
     try:
         import win32com.client as win32  # pywin32
     except Exception:
         fail(
-            "This script requires Excel + pywin32 on Windows to modify .xlsb files. "
+            "This script requires Excel + pywin32 on Windows to modify .xlsm files. "
             "Install pywin32 with: pip install pywin32"
         )
 
@@ -147,7 +149,7 @@ def reset_workbook_xlsb(path: Path) -> None:
 def main() -> None:
     ensure_dirs()
     copy_template(TEMPLATE_FILE, RUNTIME_FILE)
-    reset_workbook_xlsb(RUNTIME_FILE)
+    reset_workbook_xlsm(RUNTIME_FILE)
 
     print(f"Generated workbook: {RUNTIME_FILE}")
     print(f"Ensured runtime directories:")
