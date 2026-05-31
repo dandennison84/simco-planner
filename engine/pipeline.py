@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple
 
 from engine.io_csv import ContractInputs, ContractOutputs
 from engine.scenario import apply_scenario_delta
-from engine.flow_policy import apply_flow_policy
+from engine.flow_plan import apply_flow_plan
 from engine.allocation_policy import apply_allocation_policy
 from engine.debug import debug_log, debug_enabled,debug_rows
 
@@ -189,43 +189,32 @@ def stage_scenario_resolution(state: Dict[str, object]) -> Dict[str, object]:
 # Stage: STRUCTURE
 # Derive normalized slot context from map_structure + company
 #
-# Grain: (company_key, map_structure_key, slot_key)
+# Grain: (company_key, slot_key)
 # =============================================================================
 def stage_structure(state: Dict[str, object]) -> Dict[str, object]:
     debug_log(state, "[structure] start")
 
     structure_rows = state.get("map_structure", [])
-    company_rows = state.get("company", [])
 
     if not structure_rows:
         out = dict(state, slot_context=[])
         debug_rows(out, "structure", "slot_context")
         return out
 
-    company_by_map = {
-        _k(r.get("map_structure_key")): _k(r.get("company_key"))
-        for r in company_rows
-    }
-
     slot_context = []
 
     for r in structure_rows:
-        map_key = _k(r.get("map_structure_key"))
+        company_key = _k(r.get("company_key"))
         slot_key = _k(r.get("slot_key"))
         building_key = _k(r.get("building_key"))
         building_level = r.get("building_level")
         robots_installed = r.get("robots_installed")
 
-        if map_key == "" or slot_key == "":
-            raise ValueError("map_structure requires map_structure_key and slot_key")
-
-        company_key = company_by_map.get(map_key, "")
-        if company_key == "":
-            raise ValueError(f"No company found for map_structure_key={map_key}")
+        if company_key == "" or slot_key == "":
+            raise ValueError("map_structure requires company_key and slot_key")
 
         slot_context.append({
             "company_key": company_key,
-            "map_structure_key": map_key,
             "slot_key": slot_key,
             "building_key": building_key,
             "building_level": float(building_level),
@@ -251,8 +240,8 @@ def stage_allocation(state: Dict[str, object]) -> Dict[str, object]:
     slot_context_rows = state.get("slot_context", [])
     product_rows = state.get("product", [])
 
-    slot_by_map_slot = {
-        (_k(r.get("map_structure_key")), _k(r.get("slot_key"))): r
+    slot_by_company_slot = {
+        (_k(r.get("company_key")), _k(r.get("slot_key"))): r
         for r in slot_context_rows
     }
 
@@ -261,46 +250,58 @@ def stage_allocation(state: Dict[str, object]) -> Dict[str, object]:
         for r in product_rows
     }
 
+    # ---------------------------------------------------------
+    # Validate splits sum to 1 per slot
+    # ---------------------------------------------------------
     totals: Dict[Tuple[str, str], float] = {}
 
     for r in assigns:
-        map_key = _k(r.get("map_structure_key"))
+        company_key = _k(r.get("company_key"))
         slot = _k(r.get("slot_key"))
         frac = float(r.get("production_split_fraction"))
 
-        totals[(map_key, slot)] = totals.get((map_key, slot), 0.0) + frac
+        totals[(company_key, slot)] = totals.get((company_key, slot), 0.0) + frac
 
-    for (map_key, slot), total in totals.items():
+    for (company_key, slot), total in totals.items():
         if abs(total - 1.0) > 1e-9:
             raise ValueError(
-                f"Split must equal 1 for map_structure_key={map_key}, slot={slot}, total={total}"
+                f"Split must equal 1 for company_key={company_key}, slot={slot}, total={total}"
             )
 
+    # ---------------------------------------------------------
+    # Compute production
+    # ---------------------------------------------------------
     produced: Dict[Tuple[str, str, str], float] = {}
 
     for r in assigns:
-        map_key = _k(r.get("map_structure_key"))
+        company_key = _k(r.get("company_key"))
         slot = _k(r.get("slot_key"))
         product_key = _k(r.get("product_key"))
         quality_level = _k(r.get("quality_level"))
         split_frac = float(r.get("production_split_fraction"))
 
-        slot_key = (map_key, slot)
-        if slot_key not in slot_by_map_slot:
-            raise ValueError(f"No slot context for map_structure_key={map_key}, slot={slot}")
+        slot_key = (company_key, slot)
+        if slot_key not in slot_by_company_slot:
+            raise ValueError(f"No slot context for company_key={company_key}, slot={slot}")
 
-        slot_ctx = slot_by_map_slot[slot_key]
+        slot_ctx = slot_by_company_slot[slot_key]
 
         if product_key not in product_by_key:
             raise ValueError(f"Missing product_key={product_key}")
 
         product = product_by_key[product_key]
 
+        # building match
         slot_building_key = _k(slot_ctx.get("building_key"))
         product_building_key = _k(product.get("building_key"))
-        if slot_building_key != "" and product_building_key != "" and slot_building_key != product_building_key:
+
+        if (
+            slot_building_key != ""
+            and product_building_key != ""
+            and slot_building_key != product_building_key
+        ):
             raise ValueError(
-                f"Product/building mismatch: map_structure_key={map_key}, slot={slot}, "
+                f"Product/building mismatch: company_key={company_key}, slot={slot}, "
                 f"slot building_key={slot_building_key}, product building_key={product_building_key}"
             )
 
@@ -308,8 +309,6 @@ def stage_allocation(state: Dict[str, object]) -> Dict[str, object]:
         baseline_output_per_hour = float(product.get("baseline_output_per_hour"))
 
         units = building_level * baseline_output_per_hour * split_frac
-
-        company_key = _k(slot_ctx.get("company_key"))
 
         grain = (company_key, product_key, quality_level)
         produced[grain] = produced.get(grain, 0.0) + units
@@ -328,16 +327,15 @@ def stage_allocation(state: Dict[str, object]) -> Dict[str, object]:
     debug_rows(out, "allocation", "production_intent")
     return out
 
-
 # =============================================================================
-# Stage: FLOW POLICY
+# Stage: FLOW PLAN
 # Applies per company to avoid cross-company contamination
 # =============================================================================
-def stage_flow_policy(state: Dict[str, object]) -> Dict[str, object]:
-    debug_log(state, "[flow_policy] start")
+def stage_flow_plan(state: Dict[str, object]) -> Dict[str, object]:
+    debug_log(state, "[flow_plan] start")
 
     production_intent = state.get("production_intent", [])
-    flow_policy_rows = state.get("flow_policy", [])
+    flow_plan_rows = state.get("flow_plan", [])
 
     grouped: Dict[str, List[dict]] = {}
     for r in production_intent:
@@ -346,17 +344,13 @@ def stage_flow_policy(state: Dict[str, object]) -> Dict[str, object]:
     flow_allocation: List[dict] = []
 
     for company_key, rows in grouped.items():
-        alloc = apply_flow_policy(rows, flow_policy_rows)
+        alloc = apply_flow_plan(rows, flow_plan_rows, company_key=company_key)
 
-        flow_allocation.extend([
-            dict(r, company_key=company_key)
-            for r in alloc
-        ])
+        flow_allocation.extend(alloc)
 
     out = dict(state, flow_allocation=flow_allocation)
-    debug_rows(out, "flow_policy", "flow_allocation")
+    debug_rows(out, "flow_plan", "flow_allocation")
     return out
-
 
 # =============================================================================
 # Stage: THROUGHPUT
@@ -378,13 +372,14 @@ def stage_throughput(state: Dict[str, object]) -> Dict[str, object]:
         source_product_key = _k(r.get("source_product_key"))
         source_quality_level = _k(r.get("source_quality_level", "0"))
         target_product_key = _k(r.get("target_product_key"))
+        target_quality_level = _k(r.get("target_quality_level"))
         amt = float(_k(r.get("allocated_units_per_hour", "0")) or "0")
 
         out_map[(company_key, source_product_key, source_quality_level)] = \
             out_map.get((company_key, source_product_key, source_quality_level), 0.0) + amt
 
-        in_map[(company_key, target_product_key, source_quality_level)] = \
-            in_map.get((company_key, target_product_key, source_quality_level), 0.0) + amt
+        in_map[(company_key, target_product_key, target_quality_level)] = \
+            in_map.get((company_key, target_product_key, target_quality_level), 0.0) + amt
 
     throughput = []
 
@@ -552,7 +547,7 @@ def run_pipeline(inputs: ContractInputs) -> ContractOutputs:
 
     state = stage_structure(state)
     state = stage_allocation(state)
-    state = stage_flow_policy(state)
+    state = stage_flow_plan(state)
     state = stage_throughput(state)
     state = stage_sales(state)
     state = stage_economics(state)

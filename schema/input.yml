@@ -18,16 +18,6 @@ tables:
         required: true
         constraints: { min: 1 }
 
-      map_structure_key:
-        type: int
-        required: true
-        constraints: { min: 1 }
-
-      sales_plan_key:
-        type: int
-        required: true
-        constraints: { min: 1 }
-
       company_level:
         type: int
         required: true
@@ -48,10 +38,10 @@ tables:
     version: 1
     intent: Defines map composition at slot level
 
-    keys: [map_structure_key, slot_key]
+    keys: [company_key, slot_key]
 
     fields:
-      map_structure_key:
+      company_key:
         type: int
         required: true
         constraints: { min: 1 }
@@ -80,10 +70,10 @@ tables:
     version: 1
     intent: Defines production allocation per slot
 
-    keys: [map_structure_key, slot_key, product_key, quality_level]
+    keys: [company_key, slot_key, product_key, quality_level]
 
     fields:
-      map_structure_key:
+      company_key:
         type: int
         required: true
         constraints: { min: 1 }
@@ -209,4 +199,51 @@ tables:
         required: true
         constraints: { min: 0 }
 
-  
+flow_plan:
+  version: 1
+  intent: Defines routing of produced products to internal use or sales channels
+
+  keys: [company_key, source_product_key, source_quality_level, allocation_priority]
+
+  fields:
+
+    company_key:
+      type: int
+      required: true
+      constraints: { min: 1 }
+
+    source_product_key:
+      type: int
+      required: true
+      constraints: { min: 1 }
+
+    source_quality_level:
+      type: int
+      required: true
+      constraints: { min: 0 }
+
+    target_product_key:
+      type: int
+
+    target_quality_level:
+      type: int
+      constraints: { min: 0 }
+
+    allocation_priority:
+      type: int
+      required: true
+      constraints: { min: 1 }
+
+    allocation_units_per_hour:
+      type: float
+      constraints: { min: 0 }
+
+    allocation_frac:
+      type: float
+      constraints: { min: 0 }
+
+    enabled:
+      type: logical
+
+    notes:
+      type: string  
