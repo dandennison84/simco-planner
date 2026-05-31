@@ -1,4 +1,4 @@
-Building Key,Building Name,Building Category Key,Baseline Wage,Baseline Build Time,Baseline Robots,Max Level,Baseline Reference Value
+building_key,building_name,building_category_key,baseline_wage,baseline_build_time_hours,baseline_robots,max_level,baseline_reference_value
 1,Academy,18,0,8,,,65550
 2,Aerospace Electronics,8,725,6,38,,141450
 3,Aerospace Factory,8,587,6,30,,106950

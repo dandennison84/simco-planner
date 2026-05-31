@@ -1,4 +1,4 @@
-Building Category Name,Building Category Key,Building Subcategory Name,Counts Toward AO,Economic Role Key
+building_category_name,building_category_key,building_subcategory_name,counts_towards_ao,economic_role_key
 Production,1,Agriculture,TRUE,1
 Production,2,Food,TRUE,1
 Production,3,Construction,TRUE,1

@@ -1,6 +1,6 @@
 tables:
 
-  company_snapshot:
+  company:
     version: 1
     intent: Defines scenario identity and global modifiers
 
@@ -154,7 +154,7 @@ tables:
         constraints: { min: 0 }
 
 
-  exchange_price_override:
+  override_exchange_prices:
     version: 1
     intent: Override exchange prices
 
@@ -182,7 +182,7 @@ tables:
         constraints: { min: 0 }
 
 
-  retail_price_override:
+  override_retail_prices:
     version: 1
     intent: Override retail prices
 
@@ -209,56 +209,4 @@ tables:
         required: true
         constraints: { min: 0 }
 
-  exchange_price_override:
-      version: 1
-      intent: Override exchange prices at full key grain (overlay model)
-
-      keys: [realm_key, product_key, quality_level]
-
-      fields:
-        realm_key:
-          type: int
-          required: true
-          constraints: { min: 1 }
-
-        product_key:
-          type: int
-          required: true
-          constraints: { min: 1 }
-
-        quality_level:
-          type: int
-          required: true
-          constraints: { min: 0 }
-
-        unit_price:
-          type: float
-          required: true
-          constraints: { min: 0 }
-
-  retail_price_override:
-      version: 1
-      intent: Override retail prices at full key grain (overlay model)
-
-      keys: [realm_key, product_key, quality_level]
-
-      fields:
-        realm_key:
-          type: int
-          required: true
-          constraints: { min: 1 }
-
-        product_key:
-          type: int
-          required: true
-          constraints: { min: 1 }
-
-        quality_level:
-          type: int
-          required: true
-          constraints: { min: 0 }
-
-        unit_price:
-          type: float
-          required: true
-          constraints: { min: 0 }          
+  

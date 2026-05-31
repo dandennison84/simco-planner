@@ -232,3 +232,5 @@ __marimo__/
 /template/PlannerTemplate.xlsm
 /runtime/
 /data/runtime/
+/template/*.m
+/template/*.backup*

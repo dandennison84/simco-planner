@@ -2,42 +2,23 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List, Mapping
 import csv
 
 
-# Contract surfaces (engine-owned list; missing files load as empty)
-INPUT_TABLES = [
-    "company_snapshot",
-    "company_observed",
-    "structure_map",
-    "slot_product_assignment",
-    "sales_strategy",
-    "scenario_delta",
-    # not yet in schema.yml but reserved by architecture; loads as empty if missing
-    "flow_policy",
-]
-
-REFERENCE_TABLES = [
-    "product_bom",
-    "market_pricing",
-    "system_parameters",
-]
-
-OUTPUT_TABLES = [
-    "diagnostics",
-    "guidance",
-    "signal_evidence",
-    # optional internal surfaces can be added later without changing IO shape rules
-    "throughput",
-]
-
-
+# =============================================================================
+# Contracts
+# =============================================================================
 @dataclass(frozen=True)
 class ContractInputs:
     """
-    Minimal contract inputs.
-    Values are L1-cleaned strings (except when tests construct inputs directly).
+    External engine inputs at the CSV contract boundary.
+
+    All rows are L1-cleaned strings:
+    - None -> ""
+    - everything else -> str(...).strip()
+
+    Typing/constraints are enforced later by the validator.
     """
     input_tables: Dict[str, List[dict]]
     reference_tables: Dict[str, List[dict]]
@@ -46,81 +27,183 @@ class ContractInputs:
 @dataclass(frozen=True)
 class ContractOutputs:
     """
-    Minimal contract outputs.
+    External engine outputs at the CSV contract boundary.
     """
     output_tables: Dict[str, List[dict]]
 
 
-def _clean_row(row: dict) -> dict:
+# =============================================================================
+# L1 Clean
+# =============================================================================
+def _clean_value(value: Any) -> str:
     """
-    L1 Clean:
+    Pure value normalizer for contract reads.
+
+    Rules:
     - None -> ""
-    - everything -> str(...).strip()
-    Note: keys are preserved as-is; schema matching is exact on keys.
+    - everything else -> stripped string
     """
-    return {k: ("" if v is None else str(v).strip()) for k, v in row.items()}
+    return "" if value is None else str(value).strip()
 
 
+def _clean_row(row: Mapping[str, Any]) -> Dict[str, str]:
+    """
+    Pure row normalizer.
+    Preserves keys exactly as provided by CSV headers.
+    """
+    return {str(k): _clean_value(v) for k, v in row.items()}
+
+
+# =============================================================================
+# CSV Read / Write (I/O only)
+# =============================================================================
 def _read_csv_rows(path: Path) -> List[dict]:
     """
-    IO only: read raw CSV rows into dicts.
-    Cleaning is applied exactly once (via _clean_row) during read.
-    """
-    if not path.exists():
-        return []
+    Read CSV rows as dictionaries and apply L1 clean exactly once.
 
+    Missing file behavior is handled by the caller.
+    """
     with path.open("r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
-        rows = []
-        for r in reader:
-            rows.append(_clean_row(r))
-        return rows
+        return [_clean_row(row) for row in reader]
 
 
 def _write_csv_rows(path: Path, rows: List[dict]) -> None:
     """
-    IO only: write dict rows to CSV.
-    Header is union of keys encountered (stable sort).
+    Write dict rows to CSV.
+
+    Rules:
+    - always creates parent directories
+    - writes empty file when rows is empty
+    - header = sorted union of keys for deterministic output
     """
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Always write a file (even empty) for determinism? For now: write only when rows exist.
     if not rows:
-        # Create an empty file with no header to avoid implying schema.
         path.write_text("", encoding="utf-8")
         return
 
-    # Stable header: sorted union of keys
-    keys = sorted({k for r in rows for k in r.keys()})
+    keys = sorted({k for row in rows for k in row.keys()})
 
     with path.open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=keys, extrasaction="ignore")
         writer.writeheader()
-        for r in rows:
-            out = {k: ("" if r.get(k) is None else str(r.get(k))) for k in keys}
-            writer.writerow(out)
+        for row in rows:
+            writer.writerow({k: "" if row.get(k) is None else str(row.get(k)) for k in keys})
 
 
-def load_contract_inputs(input_dir: Path, reference_dir: Path) -> ContractInputs:
+# =============================================================================
+# Schema-driven table discovery
+# =============================================================================
+def _table_names_from_schema(schema_doc: Dict[str, Any]) -> List[str]:
     """
-    Loads known external contract surfaces if files exist.
-    Missing files are loaded as empty tables.
+    Extract table names from a loaded schema document.
+
+    Expected shape:
+      {
+        "tables": {
+          "table_name": {...},
+          ...
+        }
+      }
+
+    Raises:
+      ValueError if schema shape is invalid.
     """
-    input_tables: Dict[str, List[dict]] = {}
-    reference_tables: Dict[str, List[dict]] = {}
+    if not isinstance(schema_doc, dict):
+        raise ValueError("Schema document must be a mapping")
 
-    for name in INPUT_TABLES:
-        input_tables[name] = _read_csv_rows(input_dir / f"{name}.csv")
+    tables = schema_doc.get("tables", {})
+    if not isinstance(tables, dict):
+        raise ValueError("Schema document 'tables' must be a mapping")
 
-    for name in REFERENCE_TABLES:
-        reference_tables[name] = _read_csv_rows(reference_dir / f"{name}.csv")
-
-    return ContractInputs(input_tables=input_tables, reference_tables=reference_tables)
+    return list(tables.keys())
 
 
+# =============================================================================
+# Contract loading
+# =============================================================================
+def _load_contract_tables(
+    directory: Path,
+    schema_doc: Dict[str, Any],
+    *,
+    require_files: bool = True,
+) -> Dict[str, List[dict]]:
+    """
+    Load exactly the tables defined by the schema from the given directory.
+
+    Strict behavior:
+    - if require_files=True, every schema-defined CSV must exist
+    - if require_files=False, missing files load as empty tables
+
+    This function does NOT validate schema, types, or constraints.
+    It only loads the contract surfaces defined by schema.
+    """
+    table_names = _table_names_from_schema(schema_doc)
+
+    tables: Dict[str, List[dict]] = {}
+
+    for name in table_names:
+        path = directory / f"{name}.csv"
+
+        if not path.exists():
+            if require_files:
+                raise FileNotFoundError(f"Required contract file not found: {path}")
+            tables[name] = []
+            continue
+
+        tables[name] = _read_csv_rows(path)
+
+    return tables
+
+
+def load_contract_inputs(
+    input_dir: Path,
+    reference_dir: Path,
+    input_schema: Dict[str, Any],
+    reference_schema: Dict[str, Any],
+    *,
+    require_input_files: bool = True,
+    require_reference_files: bool = True,
+) -> ContractInputs:
+    """
+    Load external input/reference CSV contract surfaces using schema as the
+    single source of truth.
+
+    No directory scanning.
+    No hardcoded table lists.
+    No validation here.
+
+    This is the CSV contract boundary:
+      CSV -> raw cleaned rows
+    """
+    input_tables = _load_contract_tables(
+        input_dir,
+        input_schema,
+        require_files=require_input_files,
+    )
+
+    reference_tables = _load_contract_tables(
+        reference_dir,
+        reference_schema,
+        require_files=require_reference_files,
+    )
+
+    return ContractInputs(
+        input_tables=input_tables,
+        reference_tables=reference_tables,
+    )
+
+
+# =============================================================================
+# Output writing
+# =============================================================================
 def write_contract_outputs(outputs: ContractOutputs, output_dir: Path) -> None:
     """
-    Writes external output contract surfaces.
+    Write output contract surfaces.
+
+    Unlike input loading, outputs are intentionally not schema-driven here
+    because the pipeline decides which output surfaces to emit.
     """
     for name, rows in outputs.output_tables.items():
         _write_csv_rows(output_dir / f"{name}.csv", rows)

@@ -322,7 +322,7 @@ tables:
         required: true
 
 
-  season:
+  seasons:
     version: 1
     intent: Seasons
 
@@ -335,5 +335,20 @@ tables:
         constraints: { min: 1 }
 
       season_name:
+        type: string
+        required: true
+
+  system_parameters:
+    version: 1
+    intent: Defines engine configuration and debug controls
+
+    keys: [parameter_key]
+
+    fields:
+      parameter_key:
+        type: string
+        required: true
+
+      parameter_value:
         type: string
         required: true

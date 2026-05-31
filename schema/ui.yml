@@ -1,0 +1,37 @@
+tables:
+
+  tblCompany:
+    validations:
+      - column: "Realm Name"
+        lookup: "realm"
+
+  tblMapStructure:
+    validations:
+      - column: "Building Name"
+        lookup: "building"
+
+  tblProductionPlan:
+    validations:
+      - column: "Product Name"
+        lookup: "product"
+
+  tblSalesPlan:
+    validations:
+      - column: "Product Name"
+        lookup: "product"
+      - column: "Sales Channel"
+        lookup: "sales_channel"
+
+  tblOverrideExchangePrices:
+    validations:
+      - column: "Realm Name"
+        lookup: "realm"
+      - column: "Product Name"
+        lookup: "product"
+
+  tblOverrideRetailPrices:
+    validations:
+      - column: "Realm Name"
+        lookup: "realm"
+      - column: "Product Name"
+        lookup: "product"
