@@ -461,6 +461,47 @@ def stage_sales(state: Dict[str, object]) -> Dict[str, object]:
     debug_rows(out, "sales", "sales_allocation")
     return out
 
+# =============================================================================
+# Stage: STORAGE
+# =============================================================================
+def stage_storage(state: Dict[str, object]) -> Dict[str, object]:
+    debug_log(state, "[storage] start")
+
+    throughput = state.get("throughput", [])
+    sales = state.get("sales_allocation", [])
+
+    sold_map: Dict[tuple[str, str, str], float] = {}
+
+    for r in sales:
+        key = (
+            _k(r.get("company_key")),
+            _k(r.get("product_key")),
+            _k(r.get("quality_level")),
+        )
+        sold_map[key] = sold_map.get(key, 0.0) + float(r.get("allocated_units_per_hour"))
+
+    storage_state = []
+
+    for r in throughput:
+        key = (
+            _k(r.get("company_key")),
+            _k(r.get("product_key")),
+            _k(r.get("quality_level")),
+        )
+
+        available = float(r.get("units_available_per_hour"))
+        sold = sold_map.get(key, 0.0)
+
+        storage_state.append({
+            "company_key": key[0],
+            "product_key": key[1],
+            "quality_level": key[2],
+            "units_stored_per_hour": max(0.0, available - sold),
+        })
+
+    out = dict(state, storage_state=storage_state)
+    debug_rows(out, "storage", "storage_state")
+    return out
 
 # =============================================================================
 # Stage: ECONOMICS (stub)
@@ -480,9 +521,13 @@ def stage_diagnostics(state: Dict[str, object]) -> Dict[str, object]:
 
     throughput = state.get("throughput", [])
     sales_allocation = state.get("sales_allocation", [])
+    storage = state.get("storage_state", [])
 
     exchange_key, retail_key = _resolve_sales_channel_keys(state)
 
+    # ---------------------------------------------------------
+    # BUILD SALES MAP
+    # ---------------------------------------------------------
     sales_by_product: Dict[Tuple[str, str, str], Dict[str, float]] = {}
 
     for r in sales_allocation:
@@ -492,39 +537,63 @@ def stage_diagnostics(state: Dict[str, object]) -> Dict[str, object]:
         channel_key = _k(r.get("sales_channel_key"))
         qty = float(r.get("allocated_units_per_hour", 0.0))
 
-        sales_by_product.setdefault(
-            (company_key, product_key, quality_level),
-            {
+        key = (company_key, product_key, quality_level)
+
+        if key not in sales_by_product:
+            sales_by_product[key] = {
                 retail_key: 0.0,
                 exchange_key: 0.0,
-            },
-        )
-        sales_by_product[(company_key, product_key, quality_level)][channel_key] = \
-            sales_by_product[(company_key, product_key, quality_level)].get(channel_key, 0.0) + qty
+            }
 
+        sales_by_product[key][channel_key] = (
+            sales_by_product[key].get(channel_key, 0.0) + qty
+        )
+
+    # ---------------------------------------------------------
+    # BUILD STORAGE MAP
+    # ---------------------------------------------------------
+    storage_map: Dict[Tuple[str, str, str], float] = {}
+
+    for r in storage:
+        key = (
+            _k(r.get("company_key")),
+            _k(r.get("product_key")),
+            _k(r.get("quality_level")),
+        )
+
+        storage_map[key] = float(r.get("units_stored_per_hour", 0.0))
+
+    # ---------------------------------------------------------
+    # BUILD DIAGNOSTICS
+    # ---------------------------------------------------------
     diagnostics = []
 
     for r in throughput:
         company_key = _k(r.get("company_key"))
         product_key = _k(r.get("product_key"))
         quality_level = _k(r.get("quality_level"))
+
         available = float(r.get("units_available_per_hour"))
 
-        retail_qty = sales_by_product.get(
-            (company_key, product_key, quality_level), {}
-        ).get(retail_key, 0.0)
+        key = (company_key, product_key, quality_level)
 
-        exchange_qty = sales_by_product.get(
-            (company_key, product_key, quality_level), {}
-        ).get(exchange_key, 0.0)
+        retail_qty = sales_by_product.get(key, {}).get(retail_key, 0.0)
+        exchange_qty = sales_by_product.get(key, {}).get(exchange_key, 0.0)
+        stored_qty = storage_map.get(key, 0.0)
 
         diagnostics.append({
             "company_key": company_key,
             "product_key": product_key,
-            "produced_quantity": _fmt_num(available),
+            "quality_level": quality_level,
+
+            # NOTE: this is AVAILABLE, not raw produced
+            "available_quantity": _fmt_num(available),
+
             "retail_quantity": _fmt_num(retail_qty),
             "exchange_quantity": _fmt_num(exchange_qty),
-            "bottleneck": "capacity",
+            "stored_quantity": _fmt_num(stored_qty),
+
+            "bottleneck": "capacity",  # placeholder (next phase)
         })
 
     out = dict(state, diagnostics=diagnostics)
@@ -550,6 +619,7 @@ def run_pipeline(inputs: ContractInputs) -> ContractOutputs:
     state = stage_flow_plan(state)
     state = stage_throughput(state)
     state = stage_sales(state)
+    state = stage_storage(state)
     state = stage_economics(state)
     state = stage_diagnostics(state)
 
