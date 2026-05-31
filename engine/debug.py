@@ -22,12 +22,52 @@ def debug_log(state: Dict[str, object], message: str, level: int = 1) -> None:
         print(message)
 
 
+import csv
+import io
+
 def debug_rows(state: Dict[str, object], stage: str, table: str) -> None:
-    if not debug_enabled(state, 1):
+    rows = state.get(table, [])
+
+    # ----------------------------------------
+    # LEVEL 1: row count
+    # ----------------------------------------
+    if debug_enabled(state, 1):
+        if isinstance(rows, list):
+            print(f"[{stage}] {table}: rows={len(rows)}")
+        else:
+            print(f"[{stage}] {table}: (non-table)")
+
+    # stop if not list
+    if not isinstance(rows, list):
         return
 
-    rows = state.get(table, [])
-    if isinstance(rows, list):
-        print(f"[{stage}] {table}: rows={len(rows)}")
-    else:
-        print(f"[{stage}] {table}: (non-table)")
+    # ----------------------------------------
+    # LEVEL 2: sample rows
+    # ----------------------------------------
+    if debug_enabled(state, 2):
+        sample = rows[:5]
+        print(f"[{stage}] {table} sample (first 5 rows):")
+        for r in sample:
+            print(r)
+
+    # ----------------------------------------
+    # LEVEL 3: full CSV dump
+    # ----------------------------------------
+    if debug_enabled(state, 3):
+        if not rows:
+            print(f"[{stage}] {table}: <empty>")
+            return
+
+        # collect all columns across rows (safe)
+        cols = sorted({k for r in rows for k in r.keys()})
+
+        buffer = io.StringIO()
+        writer = csv.DictWriter(buffer, fieldnames=cols)
+
+        writer.writeheader()
+        for r in rows:
+            writer.writerow(r)
+
+        print(f"[{stage}] {table} CSV START")
+        print(buffer.getvalue().strip())
+        print(f"[{stage}] {table} CSV END")
