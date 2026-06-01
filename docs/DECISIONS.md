@@ -85,9 +85,10 @@ Markdown strikethrough (optional for the *Decision* cell when superseded):
 | 24 | ✅ |  |  | Generator Discipline | Row expansion logic implicit | Expansion must be controlled | Any component increasing rows must explicitly declare schema and expansion cause |
 | 25 | ✅ |  |  | Scenario Model | Scenario logic embedded in tool-specific inputs | Need reusable, tool-independent state derivation | Scenarios are defined as baseline snapshot plus scenario_delta applied as partial updates |
 | 26 | ✅ |  |  | Execution Identity | Snapshot and scenario identities conflict during execution | Pipeline must remain simple and deterministic | Engine generates a unique state_key for execution and does not rely on snapshot_key or scenario_key internally |
-| 27 | ✅ |  |  | Flow Policy Layer | Internal resource routing not explicitly modeled | Flow behavior must be separated from structure and sales | Introduce a flow policy stage between assignment and throughput to control internal resource allocation |
-| 28 | ✅      |            |            | Sales Strategy Model   | Sales demand modeled externally created implicit behavior and limited flexibility | Demand-based models conflated external conditions with allocation decisions; required explicit, table-driven behavior | Replace sales_demand with sales_strategy to define explicit, deterministic output allocation based on policy rather than demand |
-| 29 | ✅      |            |            | Flow vs Sales Strategy Separation | Internal routing and external allocation share mechanics but represent different system concerns | Both layers use priority-based allocation and deterministic execution but operate on different domains        | Maintain strict separation between flow_policy (internal resource routing) and sales_strategy (external output allocation)        |
+| 27 | ❌ |  | 30 | ~~Flow Policy Layer~~ | Internal resource routing not explicitly modeled | Flow behavior must be separated | ~~Introduce a flow policy stage~~ |
+| 28 | ❌ |  | 30 | ~~Sales Strategy Model~~ | Demand-based models created implicit behavior | Required explicit table-driven behavior | ~~Replace sales_demand with sales_strategy~~ |
+| 29 | ❌ |  | 30 | ~~Flow vs Sales Strategy Separation~~ | Internal vs external allocation modeled separately | Separation introduced duplicated logic | ~~Maintain separation of flow_policy and sales_strategy~~ |
+| 30 | ✅ | 27,28,29 |  | Consumption and Clearing Model | Flow and sales allocation models introduced routing and priority complexity | BOM fully determines consumption; market resolves imbalance; routing not required | Replace flow_policy and sales_strategy with production → BOM consumption → balance → clearing |
 
 ---
 

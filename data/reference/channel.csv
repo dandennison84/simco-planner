@@ -1,0 +1,4 @@
+channel_name,channel_key,fee_fraction,transport_type,transport_multiplier,contract_discount_allowed,uses_retail_capacity,can_source,can_sink
+Exchange,1,0.04,Full,1,FALSE,FALSE,TRUE,TRUE
+Contract,2,0,Reduced,0.5,TRUE,FALSE,TRUE,TRUE
+Retail,3,0,None,0,FALSE,TRUE,FALSE,TRUE

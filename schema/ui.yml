@@ -15,19 +15,12 @@ tables:
       - column: "Product Name"
         lookup: "product"
 
-  tblSalesPlan:
+  tblClearingPlan:
     validations:
       - column: "Product Name"
         lookup: "product"
-      - column: "Sales Channel"
-        lookup: "sales_channel"
-
-  tblProductFlowPlan:
-    validations:
-      - column: "Source Product Name"
-        lookup: "product"
-      - column: "Target Product Name"
-        lookup: "product"
+      - column: "Channel Name"
+        lookup: "channel"
 
   tblOverrideExchangePrices:
     validations:

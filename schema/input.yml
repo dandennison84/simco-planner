@@ -99,51 +99,6 @@ tables:
         constraints: { min: 0, max: 1 }
 
 
-  sales_plan:
-    version: 1
-    intent: Defines how products are sold across channels
-
-    keys: [company_key, product_key, quality_level, sales_channel_key, priority]
-
-    fields:
-      company_key:
-        type: int
-        required: true
-        constraints: { min: 1 }
-
-      product_key:
-        type: int
-        required: true
-        constraints: { min: 1 }
-
-      quality_level:
-        type: int
-        required: true
-        constraints: { min: 0 }
-
-      sales_channel_key:
-        type: int
-        required: true
-        constraints: { min: 1 }
-
-      priority:
-        type: int
-        required: true
-        constraints: { min: 1 }
-
-      allocation_units_per_hour:
-        type: float
-        constraints: { min: 0 }
-
-      allocation_frac:
-        type: float
-        constraints: { min: 0 }
-
-      contract_discount_frac:
-        type: float
-        constraints: { min: 0 }
-
-
   override_exchange_prices:
     version: 1
     intent: Override exchange prices
@@ -199,51 +154,35 @@ tables:
         required: true
         constraints: { min: 0 }
 
-flow_plan:
-  version: 1
-  intent: Defines routing of produced products to internal use or sales channels
+  clearing_plan:
+      version: 1
+      intent: Defines ordered channel allocation for surplus and shortage resolution
 
-  keys: [company_key, source_product_key, source_quality_level, allocation_priority]
+      keys: [company_key, product_key, quality_level, priority, channel_key]
 
-  fields:
+      fields:
 
-    company_key:
-      type: int
-      required: true
-      constraints: { min: 1 }
+        company_key:
+          type: int
+          required: true
+          constraints: { min: 1 }
 
-    source_product_key:
-      type: int
-      required: true
-      constraints: { min: 1 }
+        product_key:
+          type: int
+          required: true
+          constraints: { min: 1 }
 
-    source_quality_level:
-      type: int
-      required: true
-      constraints: { min: 0 }
+        quality_level:
+          type: int
+          required: true
+          constraints: { min: 0 }
 
-    target_product_key:
-      type: int
+        priority:
+          type: int
+          required: true
+          constraints: { min: 1 }
 
-    target_quality_level:
-      type: int
-      constraints: { min: 0 }
-
-    allocation_priority:
-      type: int
-      required: true
-      constraints: { min: 1 }
-
-    allocation_units_per_hour:
-      type: float
-      constraints: { min: 0 }
-
-    allocation_frac:
-      type: float
-      constraints: { min: 0 }
-
-    enabled:
-      type: logical
-
-    notes:
-      type: string  
+        channel_key:
+          type: int
+          required: true
+          constraints: { min: 1 }

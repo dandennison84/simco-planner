@@ -230,23 +230,19 @@ tables:
         constraints: { min: 1 }
 
 
-  sales_channel:
+  channel:
     version: 1
-    intent: Sales channels
+    intent: Channel Domain
 
-    keys: [sales_channel_key]
+    keys: [channel_key]
 
     fields:
-      sales_channel_key:
+      channel_key:
         type: int
         required: true
         constraints: { min: 1 }
 
-      sales_channel_name:
-        type: string
-        required: true
-
-      price_type:
+      channel_name:
         type: string
         required: true
 
@@ -267,6 +263,14 @@ tables:
         required: true
 
       uses_retail_capacity:
+        type: logical
+        required: true
+
+      can_source:
+        type: logical
+        required: true
+
+      can_sink:
         type: logical
         required: true
 

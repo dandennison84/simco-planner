@@ -16,20 +16,19 @@ from engine.pipeline import run_pipeline
 from engine.schema_loader import load_schema
 from engine.validator import validate_table
 
-def _get_debug_level(validated_inputs: Dict[str, List[dict]]) -> int:
-    try:
-        rows = validated_inputs.get("system_parameters", [])
-        for r in rows:
-            if str(r.get("parameter_key")).strip() == "debug.level":
-                return int(str(r.get("parameter_value")).strip())
-    except Exception:
-        pass
 
-    return 0
+# =============================================================================
+# Helpers
+# =============================================================================
+
+def _k(x) -> str:
+    return ("" if x is None else str(x)).strip()
+
 
 # =============================================================================
 # Paths & Environment
 # =============================================================================
+
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
@@ -51,19 +50,16 @@ def _schema_paths(repo_root: Path) -> tuple[Path, Path]:
 # =============================================================================
 # Validation
 # =============================================================================
+
 def _validate_tables(
     tables: Dict[str, List[dict]],
     schema_tables: Dict[str, Any],
 ) -> Tuple[Dict[str, List[dict]], Dict[str, dict]]:
-    """
-    PURE: table-by-table validation using strict validator.
-    """
     validated: Dict[str, List[dict]] = {}
     logs: Dict[str, dict] = {}
 
     for name, rows in tables.items():
         table_schema = schema_tables.get(name)
-
         result = validate_table(rows, table_schema)
 
         validated[name] = result["rows"]
@@ -73,10 +69,6 @@ def _validate_tables(
 
 
 def _fail_if_any_errors(logs: Dict[str, dict]) -> None:
-    """
-    STRICT GATE:
-    ANY invalid table → stop execution.
-    """
     failures = []
 
     for table, result in logs.items():
@@ -88,24 +80,43 @@ def _fail_if_any_errors(logs: Dict[str, dict]) -> None:
         raise ValueError(f"Validation failed: {'; '.join(failures)}")
 
 
-def _print_schema_summary(
-    logs: Dict[str, dict],
-    debug_level: int,
-) -> None:
+# =============================================================================
+# Build debug-aware state (KEY FIX)
+# =============================================================================
+
+def _build_debug_state(
+    validated_inputs: Dict[str, List[dict]],
+    validated_refs: Dict[str, List[dict]],
+) -> Dict[str, object]:
     """
-    Debug-aware validation summary.
-
-    Level 0:
-        no output
-
-    Level 1:
-        table summaries only
-
-    Level 2:
-        include sample errors
+    Build minimal state ONLY for debug usage (not pipeline mutation)
     """
 
-    if debug_level < 1:
+    state: Dict[str, object] = {
+        **validated_inputs,
+        **validated_refs,
+        "_meta": {},
+    }
+
+    # Populate system_parameters into _meta
+    rows = state.get("system_parameters", [])
+
+    param_map = {
+        _k(r.get("parameter_key")): _k(r.get("parameter_value"))
+        for r in rows
+    }
+
+    state["_meta"]["system_parameters_map"] = param_map
+
+    return state
+
+
+# =============================================================================
+# Validation Debug Output (NOW USES debug.py)
+# =============================================================================
+
+def _log_validation_summary(state: Dict[str, object], logs: Dict[str, dict]) -> None:
+    if not debug_enabled(state, 1):
         return
 
     total_tables = 0
@@ -119,36 +130,66 @@ def _print_schema_summary(
         rows_valid = int(log.get("rows_valid", 0))
         rows_invalid = int(log.get("rows_invalid", 0))
         errors = log.get("errors", []) or []
+
         error_count = len(errors)
 
         total_tables += 1
         total_rows += rows_read
         total_errors += error_count
 
-        # ✅ Level 1 summary
-        print(
-            f"[validate] {name}: "
-            f"read={rows_read} valid={rows_valid} invalid={rows_invalid} errors={error_count}"
+        debug_log(
+            state,
+            f"[validate] {name}: read={rows_read} valid={rows_valid} invalid={rows_invalid} errors={error_count}",
+            level=1,
         )
 
-        # ✅ Level 2 sample errors
-        if debug_level >= 2 and error_count > 0:
+        if debug_enabled(state, 2) and error_count > 0:
             for e in errors[:5]:
-                print(
+                debug_log(
+                    state,
                     f"[validate:{name}] row={e.get('row')} "
-                    f"field={e.get('field')} error={e.get('error')}"
+                    f"field={e.get('field')} error={e.get('error')}",
+                    level=2,
                 )
 
             if error_count > 5:
-                print(f"[validate:{name}] ... {error_count - 5} more errors")
+                debug_log(
+                    state,
+                    f"[validate:{name}] ... {error_count - 5} more errors",
+                    level=2,
+                )
 
-    print(
-        f"[validate] tables={total_tables} rows_read={total_rows} total_errors={total_errors}"
+    debug_log(
+        state,
+        f"[validate] tables={total_tables} rows_read={total_rows} total_errors={total_errors}",
+        level=1,
     )
+
+
+# =============================================================================
+# Optional: dump loaded data at debug level 3 (VERY USEFUL)
+# =============================================================================
+
+def _debug_loaded_tables(state: Dict[str, object]) -> None:
+    if not debug_enabled(state, 3):
+        return
+
+    debug_log(state, "[debug] input tables loaded:", level=3)
+
+    for name, rows in state.items():
+        if name == "_meta":
+            continue
+
+        if isinstance(rows, list):
+            debug_log(state, f"[debug] {name}: rows={len(rows)}", level=3)
+            if rows:
+                debug_log(state, f"[debug] {name} sample={rows[:3]}", level=3)
+
 
 # =============================================================================
 # Main
 # =============================================================================
+
 def main(env: str | None = None) -> int:
     repo_root = _repo_root()
     env = env or _default_env()
@@ -158,12 +199,11 @@ def main(env: str | None = None) -> int:
     input_dir = data_root / "input"
     output_dir = data_root / "output"
 
-    # ✅ GLOBAL reference layer
     reference_dir = repo_root / "data" / "reference"
 
-    # -------------------------------------------------------------------------
+    # ---------------------------------------------------------
     # Load schemas
-    # -------------------------------------------------------------------------
+    # ---------------------------------------------------------
     input_schema_path, reference_schema_path = _schema_paths(repo_root)
 
     input_schema = load_schema(input_schema_path)
@@ -172,9 +212,9 @@ def main(env: str | None = None) -> int:
     input_tables_schema = input_schema.get("tables", {})
     reference_tables_schema = reference_schema.get("tables", {})
 
-    # -------------------------------------------------------------------------
-    # Load contract CSVs (schema-driven)
-    # -------------------------------------------------------------------------
+    # ---------------------------------------------------------
+    # Load CSVs
+    # ---------------------------------------------------------
     inputs = load_contract_inputs(
         input_dir=input_dir,
         reference_dir=reference_dir,
@@ -184,9 +224,9 @@ def main(env: str | None = None) -> int:
         require_reference_files=True,
     )
 
-    # -------------------------------------------------------------------------
-    # STRICT VALIDATION
-    # -------------------------------------------------------------------------
+    # ---------------------------------------------------------
+    # Validate
+    # ---------------------------------------------------------
     validated_inputs, logs_in = _validate_tables(
         inputs.input_tables,
         input_tables_schema,
@@ -199,14 +239,20 @@ def main(env: str | None = None) -> int:
 
     logs = {**logs_in, **logs_ref}
 
-    debug_level = _get_debug_level(validated_inputs)
-    _print_schema_summary(logs, debug_level)
-    
+    # ---------------------------------------------------------
+    # Build debug state (CRITICAL)
+    # ---------------------------------------------------------
+    debug_state = _build_debug_state(validated_inputs, validated_refs)
+
+    _log_validation_summary(debug_state, logs)
+
+    _debug_loaded_tables(debug_state)
+
     _fail_if_any_errors(logs)
 
-    # -------------------------------------------------------------------------
-    # Pipeline (ONLY VALID DATA)
-    # -------------------------------------------------------------------------
+    # ---------------------------------------------------------
+    # Run pipeline
+    # ---------------------------------------------------------
     validated_contract = ContractInputs(
         input_tables=validated_inputs,
         reference_tables=validated_refs,
@@ -214,13 +260,13 @@ def main(env: str | None = None) -> int:
 
     outputs: ContractOutputs = run_pipeline(validated_contract)
 
-    # -------------------------------------------------------------------------
+    # ---------------------------------------------------------
     # Write outputs
-    # -------------------------------------------------------------------------
+    # ---------------------------------------------------------
     write_contract_outputs(outputs, output_dir=output_dir)
 
-    if debug_level >= 1:
-        print(f"[run] wrote outputs to: {output_dir}")
+    if debug_enabled(debug_state, 1):
+        debug_log(debug_state, f"[run] wrote outputs to: {output_dir}")
 
     return 0
 

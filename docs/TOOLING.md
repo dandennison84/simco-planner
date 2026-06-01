@@ -37,7 +37,6 @@ It does not define architecture or behavior.
 - Tooling must not introduce hidden logic
 - Tooling must be replaceable without changing system behavior
 
-
 ---
 
 ## Selection Rationale
@@ -61,6 +60,14 @@ It does not define architecture or behavior.
 - Data loaders do not transform or interpret results
 - Testing tools do not define expected behavior
 
+---
+
+## Validation
+
+- consumption must match BOM
+- clearing fractions must sum to 1
+- no routing logic present
+- no partial internal allocation
 
 ---
 

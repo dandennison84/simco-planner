@@ -130,3 +130,19 @@ The following invariants must hold for all rows:
 - All allocation quantities must be stored in hourly units
 
 - User-facing daily inputs must be normalized prior to ingestion
+
+## No Routing
+
+The system must not implement:
+
+- routing
+- path-based allocation
+- priority-based consumption
+
+All consumption must be:
+
+- BOM-driven
+- aggregate
+- global
+
+All imbalance must be resolved via clearing only.

@@ -43,15 +43,7 @@ LOOKUPS = [
         "key_col": "product_key",
         "name_col": "product_name",
         "range_name": "nr_ProductNames",
-    },
-    {
-        "sheet_name": "_ref_sales_channel",
-        "table_name": "ref_sales_channel",
-        "csv_path": REF_DIR / "sales_channel.csv",
-        "key_col": "sales_channel_key",
-        "name_col": "sales_channel_name",
-        "range_name": "nr_SalesChannelNames",
-    },
+    },    
     {
         "sheet_name": "_ref_realm",
         "table_name": "ref_realm",
@@ -60,6 +52,15 @@ LOOKUPS = [
         "name_col": "realm_name",
         "range_name": "nr_RealmNames",
     },
+    {
+        "sheet_name": "_ref_channel",
+        "table_name": "ref_channel",
+        "csv_path": REF_DIR / "channel.csv",
+        "key_col": "channel_key",
+        "name_col": "channel_name",
+        "range_name": "nr_ChannelNames",
+    },
+
 ]
 
 
@@ -212,19 +213,38 @@ def create_name_dropdown_range(
 def apply_validation(ws, table_name: str, column_name: str, range_name: str) -> None:
     """
     Applies Excel list validation to one UI column.
+    Fails fast with explicit diagnostics if the table or column is missing.
     """
+
+    # ---------------------------------
+    # Resolve table explicitly
+    # ---------------------------------
+    available_tables = [t.Name for t in ws.ListObjects]
+
+    if table_name not in available_tables:
+        raise RuntimeError(
+            f"UI validation failed: table '{table_name}' was not found on sheet '{ws.Name}'. "
+            f"Available tables: {available_tables}"
+        )
+
     lo = ws.ListObjects(table_name)
 
-    target = None
-    for i in range(1, lo.ListColumns.Count + 1):
-        col = lo.ListColumns(i)
-        if col.Name == column_name:
-            target = col.Range
-            break
+    # ---------------------------------
+    # Resolve column explicitly
+    # ---------------------------------
+    available_columns = [lo.ListColumns(i).Name for i in range(1, lo.ListColumns.Count + 1)]
 
-    if target is None:
-        raise Exception(f"{column_name} not found in {table_name}")
+    if column_name not in available_columns:
+        raise RuntimeError(
+            f"UI validation failed: column '{column_name}' was not found in table '{table_name}' "
+            f"on sheet '{ws.Name}'. Available columns: {available_columns}"
+        )
 
+    target = lo.ListColumns(column_name).Range
+
+    # ---------------------------------
+    # Reset validation
+    # ---------------------------------
     try:
         target.Validation.Delete()
     except Exception:
@@ -242,7 +262,7 @@ def apply_validation(ws, table_name: str, column_name: str, range_name: str) -> 
 LOOKUP_TO_RANGE = {
     "building": "nr_BuildingNames",
     "product": "nr_ProductNames",
-    "sales_channel": "nr_SalesChannelNames",
+    "channel": "nr_ChannelNames",
     "realm": "nr_RealmNames",
 }
 
