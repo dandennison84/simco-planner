@@ -26,27 +26,15 @@ def _to_int(x, default: int = 0) -> int:
         return default
     return int(s)
 
-
-def _build_retail_capacity_map(state: Dict[str, object]) -> Dict[Tuple[str, str, str], float]:
-    """
-    Returns:
-      (company_key, product_key, quality_level) -> retail capacity per hour
-
-    Formula:
-      baseline_retail_units * (1 + sales_speed_delta)
-
-    Source:
-      retail_prices keyed by (realm_key, product_key, quality_level)
-      company provides company_key -> realm_key + sales_speed_delta
-    """
+def _build_retail_capacity_map(state):
     company_rows = state.get("company", [])
     retail_rows = state.get("retail_prices", [])
 
     company_index = {
-        _k(r.get("company_key")): {
-            "realm_key": _k(r.get("realm_key")),
-            "sales_speed_delta": _to_float(r.get("sales_speed_delta")),
-        }
+        _k(r.get("company_key")): (
+            _k(r.get("realm_key")),
+            _to_float(r.get("sales_speed_delta"))
+        )
         for r in company_rows
     }
 
@@ -54,26 +42,20 @@ def _build_retail_capacity_map(state: Dict[str, object]) -> Dict[Tuple[str, str,
         (
             _k(r.get("realm_key")),
             _k(r.get("product_key")),
-            _k(r.get("quality_level")),
+            _k(r.get("quality_level"))
         ): _to_float(r.get("baseline_retail_units"))
         for r in retail_rows
     }
 
-    capacity_map: Dict[Tuple[str, str, str], float] = {}
+    capacity_map = {}
 
-    for company_key, meta in company_index.items():
-        realm_key = meta["realm_key"]
-        sales_speed_delta = meta["sales_speed_delta"]
-
-        for (rk, product_key, quality_level), baseline_units in retail_index.items():
-            if rk != realm_key:
-                continue
-
-            capacity_map[(company_key, product_key, quality_level)] = baseline_units * (1.0 + sales_speed_delta)
+    for company_key, (realm_key, delta) in company_index.items():
+        for (rk, pk, ql), base in retail_index.items():
+            if rk == realm_key:
+                capacity_map[(company_key, pk, ql)] = base * (1.0 + delta)
 
     return capacity_map
-
-
+    
 def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
     """
     Sequential waterfall allocation for surplus / shortage.

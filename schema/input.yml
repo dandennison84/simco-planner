@@ -191,6 +191,6 @@ tables:
           type: float
           constraints: { min: 0 }
 
-        allocation_fraction:
+        allocation_frac:
           type: float                    
           constraints: { min: 0, max: 1 }
