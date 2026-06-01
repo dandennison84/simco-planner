@@ -186,3 +186,11 @@ tables:
           type: int
           required: true
           constraints: { min: 1 }
+
+        allocation_units_per_hour:
+          type: float
+          constraints: { min: 0 }
+
+        allocation_fraction:
+          type: float                    
+          constraints: { min: 0, max: 1 }

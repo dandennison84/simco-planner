@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import os
 from typing import Dict, List, Tuple, Any
+from collections import defaultdict
 
 from engine.debug import debug_log, debug_enabled
 
@@ -68,17 +69,51 @@ def _validate_tables(
     return validated, logs
 
 
-def _fail_if_any_errors(logs: Dict[str, dict]) -> None:
+from collections import defaultdict
+
+def _fail_if_any_errors(logs):
     failures = []
 
     for table, result in logs.items():
-        if not result["valid"]:
-            error_count = len(result["log"]["errors"])
-            failures.append(f"{table}: {error_count} errors")
+        errors = result.get("log", {}).get("errors", [])
+
+        if errors:
+            # ✅ GROUP errors
+            field_summary = defaultdict(int)
+
+            for err in errors:
+                key = (err.get("field"), err.get("error"))
+                field_summary[key] += 1
+
+            summary_lines = [
+                f"{field} → {msg} ({count} rows)"
+                for (field, msg), count in sorted(field_summary.items())
+            ]
+
+            # ✅ SAMPLE rows only (NOT all)
+            examples = []
+            for err in errors[:6]:
+                examples.append(
+                    f"row {err.get('row')} field '{err.get('field')}': {err.get('error')}"
+                )
+
+            failures.append(
+                f"{table}: {len(errors)} errors\n\n"
+                f"FIELD SUMMARY:\n"
+                + "\n".join(summary_lines)
+                + "\n\nEXAMPLES:\n"
+                + "\n".join(examples)
+            )
 
     if failures:
-        raise ValueError(f"Validation failed: {'; '.join(failures)}")
+        message = (
+            "\n" + "="*60 +
+            "\nVALIDATION FAILED — PIPELINE HALTED\n" +
+            "="*60 + "\n\n" +
+            "\n\n".join(failures)
+        )
 
+        raise SystemExit(message)
 
 # =============================================================================
 # Build debug-aware state (KEY FIX)
@@ -246,9 +281,9 @@ def main(env: str | None = None) -> int:
 
     _log_validation_summary(debug_state, logs)
 
-    _debug_loaded_tables(debug_state)
-
     _fail_if_any_errors(logs)
+
+    _debug_loaded_tables(debug_state)
 
     # ---------------------------------------------------------
     # Run pipeline
