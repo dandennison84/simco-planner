@@ -5,6 +5,18 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping
 import csv
 
+"""
+I/O boundary only.
+
+This module:
+- reads CSVs into normalized row structures
+- writes schema-driven outputs
+
+This module does NOT:
+- validate schema
+- enforce constraints
+- enforce logical relationships
+"""
 
 # =============================================================================
 # Contracts

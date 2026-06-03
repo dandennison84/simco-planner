@@ -69,9 +69,6 @@ def _validate_tables(
 
     return validated, logs
 
-
-from collections import defaultdict
-
 def _fail_if_any_errors(logs):
     failures = []
 
@@ -116,6 +113,68 @@ def _fail_if_any_errors(logs):
 
         raise SystemExit(message)
 
+def _validate_logical_completeness(
+    inputs: Dict[str, List[dict]],
+    refs: Dict[str, List[dict]],
+) -> None:
+    """
+    Enforce cross-table logical requirements (REQ-090).
+    Fail fast if required relationships are missing.
+    """
+
+    # Example: every product in production_plan must exist in product reference
+    production = inputs.get("production_plan", [])
+    products = refs.get("product", [])
+
+    product_index = {r.get("product_key") for r in products}
+
+    missing_products = [
+        r.get("product_key")
+        for r in production
+        if r.get("product_key") not in product_index
+    ]
+
+    if missing_products:
+        raise SystemExit(
+            f"FATAL: production_plan references unknown products: {sorted(set(missing_products))}"
+        )
+    
+def _validate_empty_table_semantics(
+    inputs: Dict[str, List[dict]],
+) -> None:
+    """
+    Enforce empty-table rules (REQ-088).
+    """
+
+    production = inputs.get("production_plan", [])
+    company_rows = inputs.get("company", [])
+
+    # Example rule:
+    # If production_plan exists, company must exist
+    if production and not company_rows:
+        raise SystemExit(
+            "FATAL: production_plan provided but company table is empty"
+        )
+
+def _validate_required_inputs_non_empty(
+    validated_inputs: Dict[str, List[dict]],
+) -> None:
+    required_inputs = [
+        "company",
+        "map_structure",
+        "production_plan",
+    ]
+
+    for name in required_inputs:
+        if not validated_inputs.get(name):
+            raise SystemExit(f"FATAL: required input '{name}' is empty")
+
+def _validate_output_non_empty(validated_outputs: Dict[str, List[dict]]):
+    # Optional rule: important outputs must not be empty
+    # Example:
+    if not validated_outputs.get("production_intent"):
+        raise SystemExit("FATAL: production_intent is empty")
+        
 # =============================================================================
 # Build debug-aware state (KEY FIX)
 # =============================================================================
@@ -286,16 +345,14 @@ def main(env: str | None = None) -> int:
 
     _fail_if_any_errors(logs)
 
-    required_inputs = [
-    "company",
-    "map_structure",
-    "production_plan",
-]
+    # ---------------------------------------------------------
+    # Structural validation boundary complete
+    # From this point forward, data is guaranteed valid
+    # ---------------------------------------------------------
 
-    for name in required_inputs:
-        if not validated_inputs.get(name):
-            raise SystemExit(f"FATAL: required input '{name}' is empty")
-
+    _validate_required_inputs_non_empty(validated_inputs)
+    _validate_logical_completeness(validated_inputs, validated_refs)
+    _validate_empty_table_semantics(validated_inputs)
 
     _debug_loaded_tables(debug_state)
 
@@ -326,6 +383,7 @@ def main(env: str | None = None) -> int:
             f"FATAL: missing required output tables: {sorted(missing)}"
         )
 
+    _validate_output_non_empty(validated_outputs)
 
     # ---------------------------------------------------------
     # Write outputs

@@ -75,35 +75,6 @@ tables:
         type: float
         required: true
 
-
-  clearing_remainder:
-    version: 1
-    intent: Unresolved surplus or shortage after clearing
-
-    keys: [company_key, product_key, quality_level]
-
-    fields:
-      company_key:
-        type: int
-        required: true
-
-      product_key:
-        type: int
-        required: true
-
-      quality_level:
-        type: int
-        required: true
-
-      direction:
-        type: text
-        required: true
-
-      remaining_units_per_hour:
-        type: float
-        required: true
-
-
   clearing_result:
     version: 1
     intent: Channel-level allocation results
@@ -132,7 +103,7 @@ tables:
         required: true
 
       direction:
-        type: text
+        type: string
         required: true
 
       allocated_units_per_hour:

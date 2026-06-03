@@ -54,7 +54,9 @@ def debug_validate_result(
 
 # =============================================================================
 # Coercion
+# enforce int always ≥ 0 if desired (optional domain constraint)
 # =============================================================================
+
 def _coerce(value: Any, target_type: str) -> Tuple[bool, Any, str]:
     """
     Pure coercion helper.

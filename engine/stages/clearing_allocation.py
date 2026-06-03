@@ -70,15 +70,12 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
       - retail_prices
 
     Outputs:
-      - clearing_result
-      - clearing_remainder
-
+    - clearing_result
+    - allocation_summary
+    
     Grain:
       clearing_result:
         (company_key, product_key, quality_level, priority, channel_key)
-
-      clearing_remainder:
-        (company_key, product_key, quality_level)
 
     Rules:
       - if net > 0: only channels with can_sink = TRUE may receive allocation
@@ -90,7 +87,6 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
       - allocation_frac is applied to REMAINING
       - if channel uses retail capacity:
             cap = baseline_retail_units * (1 + sales_speed_delta)
-      - remainder is emitted explicitly
     """
     debug_log(state, "[clearing_allocation] start")
 
@@ -116,7 +112,6 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
         clearing_by_product.setdefault(key, []).append(r)
 
     clearing_result: List[dict] = []
-    clearing_remainder: List[dict] = []
     allocation_summary: List[dict] = []
 
     for bal in balance_rows:
@@ -137,17 +132,10 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
 
         rules = clearing_by_product.get((company_key, product_key, quality_level), [])
         if not rules:
-            clearing_remainder.append(
-                {
-                    "company_key": company_key,
-                    "product_key": product_key,
-                    "quality_level": quality_level,
-                    "direction": direction,
-                    "remaining_units_per_hour": remaining,
-                }
+            raise ValueError(
+                f"No clearing rules for company={company_key}, product={product_key}, quality={quality_level}, remaining={remaining}"
             )
-            continue
-
+        
         # validate unique priorities within product
         priorities = [_to_int(r.get("priority")) for r in rules]
         if len(priorities) != len(set(priorities)):
@@ -237,58 +225,41 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
                 break
 
         if remaining > 1e-12:
-            clearing_remainder.append(
-                {
-                    "company_key": company_key,
-                    "product_key": product_key,
-                    "quality_level": quality_level,
-                    "direction": direction,
-                    "remaining_units_per_hour": remaining,
-                }
+            raise ValueError(
+                f"Incomplete clearing for company={company_key}, product={product_key}, quality={quality_level}, remaining={remaining}"
             )
+
 
         # debug summary (level 2)
-        if total_initial > 0:
-            capped = retail_alloc < total_initial and retail_alloc > 0
+        capped = retail_alloc < total_initial and retail_alloc > 0
 
-            allocation_summary.append({
-                "company_key": company_key,
-                "product_key": product_key,
-                "quality_level": quality_level,
-                "total_units_per_hour": total_initial,
-                "retail_units_per_hour": retail_alloc,
-                "non_retail_units_per_hour": contract_alloc,
-                "is_retail_capped": retail_alloc < total_initial and retail_alloc > 0,
-            })            
+        allocation_summary.append({
+            "company_key": company_key,
+            "product_key": product_key,
+            "quality_level": quality_level,
+            "total_units_per_hour": total_initial,
+            "retail_units_per_hour": retail_alloc,
+            "non_retail_units_per_hour": contract_alloc,
+            "is_retail_capped": capped,
+        })            
 
-            debug_log(
-                state,
-                f"[check] company={company_key} product={product_key} "
-                f"total={round(total_initial,4)} "
-                f"retail={round(retail_alloc,4)} "
-                f"contract={round(contract_alloc,4)} "
-                f"capped={capped}",
-                level=2,
-            )
-
-    if not clearing_remainder:
-        clearing_remainder = [{
-            "company_key": None,
-            "product_key": None,
-            "quality_level": None,
-            "direction": None,
-            "remaining_units_per_hour": None,
-        }]
+        debug_log(
+            state,
+            f"[check] company={company_key} product={product_key} "
+            f"total={round(total_initial,4)} "
+            f"retail={round(retail_alloc,4)} "
+            f"contract={round(contract_alloc,4)} "
+            f"capped={capped}",
+            level=2,
+        )
 
     out = dict(
         state,
         clearing_result=clearing_result,
-        clearing_remainder=clearing_remainder,
         allocation_summary=allocation_summary,
     )
 
     debug_rows(out, "clearing_allocation", "clearing_result")
-    debug_rows(out, "clearing_allocation", "clearing_remainder")
 
 # ---------------------------------------------------------
     # Invariant: allocations must match net
@@ -313,21 +284,7 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
         expected = abs(_to_float(r["net_units_per_hour"]))
         actual = alloc_sum.get(key, 0.0)
 
-        remainder = 0.0
-        for rr in clearing_remainder:
-            rr_key = (
-                _k(rr.get("company_key")),
-                _k(rr.get("product_key")),
-                _k(rr.get("quality_level")),
-            )
-            if rr_key == key:
-                remainder += _to_float(rr.get("remaining_units_per_hour"))
-
-        if abs((actual + remainder) - expected) > 1e-6:
+        if abs(actual - expected) > 1e-6:
             raise ValueError(f"Clearing invariant violated for {key}")
-
-    for r in clearing_result:
-        if _to_float(r["allocated_units_per_hour"]) < 0:
-            raise ValueError("Negative clearing allocation detected")
     
     return out
