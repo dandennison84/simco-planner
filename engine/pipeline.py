@@ -49,6 +49,7 @@ def run_pipeline(inputs: ContractInputs) -> ContractOutputs:
         output_tables={
             "production_intent": state["production_intent"],
             "product_bom_consumption": state["product_bom_consumption"],
+            "product_bom_demand_detail": state["product_bom_demand_detail"],
             "balance_plan": state["balance_plan"],
             "clearing_result": state["clearing_result"],
             "allocation_summary": state["allocation_summary"],  # ✅ ADD THIS

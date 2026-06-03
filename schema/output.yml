@@ -156,3 +156,41 @@ tables:
 
       units_produced_per_hour:
         type: float
+
+  product_bom_demand_detail:
+    version: 1
+    intent: Source-to-demand recursive BOM trace
+
+    keys:
+      [
+        company_key,
+        source_product_key,
+        source_quality_level,
+        demanded_product_key,
+        demanded_quality_level,
+      ]
+
+    fields:
+      company_key:
+        type: int
+        required: true
+
+      source_product_key:
+        type: int
+        required: true
+
+      source_quality_level:
+        type: int
+        required: true
+
+      demanded_product_key:
+        type: int
+        required: true
+
+      demanded_quality_level:
+        type: int
+        required: true
+
+      units_consumed_per_hour:
+        type: float
+        required: true        

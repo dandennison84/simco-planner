@@ -92,6 +92,7 @@ def _normalize_product_bom_rows(bom_rows: List[dict]) -> List[dict]:
 
     return normalized
 
+
 def _expand_bom_requirements(
     output_product_key: str,
     output_quality_level: str,
@@ -101,7 +102,7 @@ def _expand_bom_requirements(
     path: Tuple[Tuple[str, str], ...] = (),
 ) -> List[Tuple[str, str, float]]:
     """
-    Recursively expand BOM requirements until terminal inputs are reached.
+    Recursively expand BOM requirements across all levels.
 
     Returns a flat list of:
       (input_product_key, input_quality_level, required_units)
@@ -109,8 +110,8 @@ def _expand_bom_requirements(
     Rules:
       - if exact (product_key, quality_level) BOM exists, use it
       - else use generic BOM by product_key
-      - if an input product has no BOM rows, it is terminal and emitted
       - input_quality_level defaults to current output_quality_level when blank
+      - intermediate and lower-level demand are both emitted
     """
 
     current_node = (output_product_key, output_quality_level)
@@ -124,9 +125,9 @@ def _expand_bom_requirements(
     if requirements is None:
         requirements = bom_by_output_product.get(output_product_key, [])
 
-    # terminal product
+    # terminal product: no further consumed inputs
     if not requirements:
-        return [(output_product_key, output_quality_level, output_units)]
+        return []
 
     expanded: List[Tuple[str, str, float]] = []
 
@@ -142,11 +143,11 @@ def _expand_bom_requirements(
         input_quality_level = _k(req.get("input_quality_level")) or output_quality_level
         required_units = output_units * qty
 
+        # ALWAYS emit this level
+        expanded.append((input_product_key, input_quality_level, required_units))
+
         child_exact = bom_by_output_exact.get((input_product_key, input_quality_level))
         child_generic = bom_by_output_product.get(input_product_key, [])
-
-        # ALWAYS emit this level (intermediate demand)
-        expanded.append((input_product_key, input_quality_level, required_units))
 
         if child_exact is not None or child_generic:
             expanded.extend(
@@ -162,26 +163,34 @@ def _expand_bom_requirements(
 
     return expanded
 
+
 def stage_product_bom_consumption(state: Dict[str, object]) -> Dict[str, object]:
     """
-    Computes fully expanded BOM consumption implied by unconstrained production_intent.
+    Computes fully expanded BOM consumption implied by production_intent.
 
     Inputs:
       - production_intent
       - product_bom
 
-    Output:
+    Outputs:
       - product_bom_consumption
+      - product_bom_demand_detail
 
     Grain:
-      (company_key, product_key, quality_level)
+      product_bom_consumption:
+        (company_key, product_key, quality_level)
+
+      product_bom_demand_detail:
+        (company_key, source_product_key, source_quality_level,
+         demanded_product_key, demanded_quality_level)
 
     Rules:
       - consumption is recursively expanded across all BOM levels
       - if BOM row specifies output_quality_level, it only matches that output QL
       - if BOM row specifies input_quality_level, that becomes the input QL
       - otherwise input consumption QL defaults to produced row quality_level
-      - only terminal inputs are emitted into product_bom_consumption
+      - product_bom_consumption is aggregated total recursive demand
+      - product_bom_demand_detail preserves source → demand relationships
     """
     debug_log(state, "[product_bom_consumption] start")
 
@@ -189,6 +198,7 @@ def stage_product_bom_consumption(state: Dict[str, object]) -> Dict[str, object]
     bom_rows = _normalize_product_bom_rows(state.get("product_bom", []))
 
     consumption_map: Dict[Tuple[str, str, str], float] = {}
+    demand_detail_map: Dict[Tuple[str, str, str, str, str], float] = {}
 
     # index BOM by output product (+ optional exact QL)
     bom_by_output_product: Dict[str, List[dict]] = {}
@@ -204,24 +214,37 @@ def stage_product_bom_consumption(state: Dict[str, object]) -> Dict[str, object]
 
     for row in production_rows:
         company_key = _k(row.get("company_key"))
-        output_product_key = _k(row.get("product_key"))
-        output_quality_level = _k(row.get("quality_level"))
+        source_product_key = _k(row.get("product_key"))
+        source_quality_level = _k(row.get("quality_level"))
         produced_units = _to_float(row.get("units_produced_per_hour"))
 
         if produced_units <= 0:
             continue
 
         expanded_inputs = _expand_bom_requirements(
-            output_product_key=output_product_key,
-            output_quality_level=output_quality_level,
+            output_product_key=source_product_key,
+            output_quality_level=source_quality_level,
             output_units=produced_units,
             bom_by_output_product=bom_by_output_product,
             bom_by_output_exact=bom_by_output_exact,
         )
 
-        for input_product_key, input_quality_level, required_units in expanded_inputs:
-            key = (company_key, input_product_key, input_quality_level)
-            consumption_map[key] = consumption_map.get(key, 0.0) + required_units
+        for demanded_product_key, demanded_quality_level, required_units in expanded_inputs:
+            # Aggregated recursive demand
+            agg_key = (company_key, demanded_product_key, demanded_quality_level)
+            consumption_map[agg_key] = consumption_map.get(agg_key, 0.0) + required_units
+
+            # Source → demand trace
+            detail_key = (
+                company_key,
+                source_product_key,
+                source_quality_level,
+                demanded_product_key,
+                demanded_quality_level,
+            )
+            demand_detail_map[detail_key] = (
+                demand_detail_map.get(detail_key, 0.0) + required_units
+            )
 
     product_bom_consumption = [
         {
@@ -233,14 +256,42 @@ def stage_product_bom_consumption(state: Dict[str, object]) -> Dict[str, object]
         for (company_key, product_key, quality_level), units in sorted(consumption_map.items())
     ]
 
-    out = dict(state, product_bom_consumption=product_bom_consumption)
+    product_bom_demand_detail = [
+        {
+            "company_key": company_key,
+            "source_product_key": source_product_key,
+            "source_quality_level": source_quality_level,
+            "demanded_product_key": demanded_product_key,
+            "demanded_quality_level": demanded_quality_level,
+            "units_consumed_per_hour": units,
+        }
+        for (
+            company_key,
+            source_product_key,
+            source_quality_level,
+            demanded_product_key,
+            demanded_quality_level,
+        ), units in sorted(demand_detail_map.items())
+    ]
+
+    out = dict(
+        state,
+        product_bom_consumption=product_bom_consumption,
+        product_bom_demand_detail=product_bom_demand_detail,
+    )
+
     debug_rows(out, "product_bom_consumption", "product_bom_consumption")
+    debug_rows(out, "product_bom_consumption", "product_bom_demand_detail")
 
     # ---------------------------------------------------------
-    # Invariant: consumption must be non-negative
+    # Invariants
     # ---------------------------------------------------------
     for r in product_bom_consumption:
         if r["units_consumed_per_hour"] < 0:
             raise ValueError("Negative consumption detected")
+
+    for r in product_bom_demand_detail:
+        if r["units_consumed_per_hour"] < 0:
+            raise ValueError("Negative demand detail detected")
 
     return out
