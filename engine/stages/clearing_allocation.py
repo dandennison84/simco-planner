@@ -115,12 +115,17 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
 
     clearing_result: List[dict] = []
     clearing_remainder: List[dict] = []
+    allocation_summary: List[dict] = []
 
     for bal in balance_rows:
         company_key = _k(bal.get("company_key"))
         product_key = _k(bal.get("product_key"))
         quality_level = _k(bal.get("quality_level"))
         net = _to_float(bal.get("net_units_per_hour"))
+
+        total_initial = abs(net)
+        retail_alloc = 0.0
+        contract_alloc = 0.0
 
         if abs(net) <= 1e-12:
             continue
@@ -165,6 +170,7 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
             ch = channel_index[channel_key]
             can_source = bool(ch.get("can_source"))
             can_sink = bool(ch.get("can_sink"))
+            is_retail = bool(ch.get("uses_retail_capacity"))
 
             # direction filter
             if direction == "source" and not can_source:
@@ -193,7 +199,7 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
                 continue
 
             # retail capacity applies only to sink channels that use retail capacity
-            if direction == "sink" and bool(ch.get("uses_retail_capacity")):
+            if direction == "sink" and is_retail:
                 cap = retail_capacity_map.get((company_key, product_key, quality_level), 0.0)
                 used = allocated_so_far.get(channel_key, 0.0)
                 cap_left = max(0.0, cap - used)
@@ -206,6 +212,12 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
 
             remaining -= allocated
             allocated_so_far[channel_key] = allocated_so_far.get(channel_key, 0.0) + allocated
+
+            # semantic tracking for debug summary (no hardcoded channel ids)
+            if is_retail:
+                retail_alloc += allocated
+            else:
+                contract_alloc += allocated
 
             clearing_result.append(
                 {
@@ -233,11 +245,46 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
                 }
             )
 
+        # debug summary (level 2)
+        if total_initial > 0:
+            capped = retail_alloc < total_initial and retail_alloc > 0
+
+            allocation_summary.append({
+                "company_key": company_key,
+                "product_key": product_key,
+                "quality_level": quality_level,
+                "total_units_per_hour": total_initial,
+                "retail_units_per_hour": retail_alloc,
+                "non_retail_units_per_hour": contract_alloc,
+                "is_retail_capped": retail_alloc < total_initial and retail_alloc > 0,
+            })            
+
+            debug_log(
+                state,
+                f"[check] company={company_key} product={product_key} "
+                f"total={round(total_initial,4)} "
+                f"retail={round(retail_alloc,4)} "
+                f"contract={round(contract_alloc,4)} "
+                f"capped={capped}",
+                level=2,
+            )
+
+    if not clearing_remainder:
+        clearing_remainder = [{
+            "company_key": None,
+            "product_key": None,
+            "quality_level": None,
+            "direction": None,
+            "remaining_units_per_hour": None,
+        }]
+
     out = dict(
         state,
         clearing_result=clearing_result,
         clearing_remainder=clearing_remainder,
+        allocation_summary=allocation_summary,
     )
+
     debug_rows(out, "clearing_allocation", "clearing_result")
     debug_rows(out, "clearing_allocation", "clearing_remainder")
     return out

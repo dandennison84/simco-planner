@@ -41,6 +41,8 @@ def run_pipeline(inputs: ContractInputs) -> ContractOutputs:
     state = stage_balance(state)
     state = stage_clearing_allocation(state)
 
+    from pprint import pprint
+
     return ContractOutputs(
         output_tables={
             "production_intent": state["production_intent"],
@@ -48,5 +50,6 @@ def run_pipeline(inputs: ContractInputs) -> ContractOutputs:
             "balance_plan": state["balance_plan"],
             "clearing_result": state["clearing_result"],
             "clearing_remainder": state["clearing_remainder"],
+            "allocation_summary": state["allocation_summary"],  # ✅ ADD THIS
         }
     )

@@ -45,6 +45,7 @@ def _schema_paths(repo_root: Path) -> tuple[Path, Path]:
     return (
         schema_dir / "input.yml",
         schema_dir / "reference.yml",
+        schema_dir / "output.yml",
     )
 
 
@@ -239,13 +240,15 @@ def main(env: str | None = None) -> int:
     # ---------------------------------------------------------
     # Load schemas
     # ---------------------------------------------------------
-    input_schema_path, reference_schema_path = _schema_paths(repo_root)
+    input_schema_path, reference_schema_path, output_schema_path = _schema_paths(repo_root)
 
     input_schema = load_schema(input_schema_path)
     reference_schema = load_schema(reference_schema_path)
+    output_schema = load_schema(output_schema_path)
 
     input_tables_schema = input_schema.get("tables", {})
     reference_tables_schema = reference_schema.get("tables", {})
+    output_tables_schema = output_schema.get("tables", {})
 
     # ---------------------------------------------------------
     # Load CSVs
@@ -283,6 +286,17 @@ def main(env: str | None = None) -> int:
 
     _fail_if_any_errors(logs)
 
+    required_inputs = [
+    "company",
+    "map_structure",
+    "production_plan",
+]
+
+    for name in required_inputs:
+        if not validated_inputs.get(name):
+            raise SystemExit(f"FATAL: required input '{name}' is empty")
+
+
     _debug_loaded_tables(debug_state)
 
     # ---------------------------------------------------------
@@ -295,10 +309,32 @@ def main(env: str | None = None) -> int:
 
     outputs: ContractOutputs = run_pipeline(validated_contract)
 
+    validated_outputs, logs_out = _validate_tables(
+        outputs.output_tables,
+        output_tables_schema,
+    )
+
+    _fail_if_any_errors(logs_out)
+
+    schema_output_names = set(output_tables_schema.keys())
+    actual_output_names = set(validated_outputs.keys())
+
+    missing = schema_output_names - actual_output_names
+
+    if missing:
+        raise SystemExit(
+            f"FATAL: missing required output tables: {sorted(missing)}"
+        )
+
+
     # ---------------------------------------------------------
     # Write outputs
     # ---------------------------------------------------------
-    write_contract_outputs(outputs, output_dir=output_dir)
+    write_contract_outputs(
+        ContractOutputs(validated_outputs),
+        output_dir=output_dir,
+        output_schema=output_schema,
+    )
 
     if debug_enabled(debug_state, 1):
         debug_log(debug_state, f"[run] wrote outputs to: {output_dir}")

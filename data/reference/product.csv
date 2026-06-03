@@ -1,4 +1,4 @@
-product_name,product_key,building_key,baseline_output_per_hour,transport_units_per_unit
+product_name,product_key,building_key,transport_units_per_unit,baseline_output_per_hour
 Aerospace Research,1,34,0,725
 Aluminium,2,19,1,119.79
 Apple Cider,3,8,1,36.56

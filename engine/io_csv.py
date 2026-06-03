@@ -68,29 +68,39 @@ def _read_csv_rows(path: Path) -> List[dict]:
         return [_clean_row(row) for row in reader]
 
 
-def _write_csv_rows(path: Path, rows: List[dict]) -> None:
+def _write_csv_rows(
+    path: Path,
+    rows: List[dict],
+    *,
+    columns: List[str] | None = None,
+) -> None:
     """
     Write dict rows to CSV.
 
     Rules:
     - always creates parent directories
-    - writes empty file when rows is empty
-    - header = sorted union of keys for deterministic output
+    - if columns are provided, they are the schema source of truth
+    - if rows is empty and columns are provided, writes header-only CSV
+    - if rows is empty and columns are not provided, writes empty file
     """
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    if not rows:
+    if columns is not None:
+        keys = list(columns)
+    else:
+        keys = sorted({k for row in rows for k in row.keys()})
+
+    if not keys:
         path.write_text("", encoding="utf-8")
         return
-
-    keys = sorted({k for row in rows for k in row.keys()})
 
     with path.open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=keys, extrasaction="ignore")
         writer.writeheader()
         for row in rows:
+            if all(row.get(k) in (None, "") for k in keys):
+                continue
             writer.writerow({k: "" if row.get(k) is None else str(row.get(k)) for k in keys})
-
 
 # =============================================================================
 # Schema-driven table discovery
@@ -198,12 +208,24 @@ def load_contract_inputs(
 # =============================================================================
 # Output writing
 # =============================================================================
-def write_contract_outputs(outputs: ContractOutputs, output_dir: Path) -> None:
+def write_contract_outputs(
+    outputs: ContractOutputs,
+    output_dir: Path,
+    output_schema: Dict[str, Any],
+) -> None:
     """
-    Write output contract surfaces.
+    Write output contract surfaces using output schema as the
+    source of truth for column order and empty-table headers.
+    """
+    schema_tables = output_schema.get("tables", {})
 
-    Unlike input loading, outputs are intentionally not schema-driven here
-    because the pipeline decides which output surfaces to emit.
-    """
     for name, rows in outputs.output_tables.items():
-        _write_csv_rows(output_dir / f"{name}.csv", rows)
+        table_schema = schema_tables.get(name, {})
+        fields = table_schema.get("fields", {})
+        columns = list(fields.keys())
+
+        _write_csv_rows(
+            output_dir / f"{name}.csv",
+            rows,
+            columns=columns,
+        )

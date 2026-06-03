@@ -1,0 +1,187 @@
+tables:
+
+  allocation_summary:
+    version: 1
+    intent: Allocation breakdown by retail vs non-retail
+
+    keys: [company_key, product_key, quality_level]
+
+    fields:
+      company_key:
+        type: int
+        required: true
+
+      product_key:
+        type: int
+        required: true
+
+      quality_level:
+        type: int
+        required: true
+
+      total_units_per_hour:
+        type: float
+        required: true
+
+      retail_units_per_hour:
+        type: float
+        required: true
+
+      non_retail_units_per_hour:
+        type: float
+        required: true
+
+      is_retail_capped:
+        type: logical
+        required: true
+
+
+  balance_plan:
+    version: 1
+    intent: Net balance and production/consumption breakdown
+
+    keys: [company_key, product_key, quality_level]
+
+    fields:
+      company_key:
+        type: int
+        required: true
+
+      product_key:
+        type: int
+        required: true
+
+      quality_level:
+        type: int
+        required: true
+
+      net_units_per_hour:
+        type: float
+        required: true
+
+      shortage_units_per_hour:
+        type: float
+        required: true
+
+      surplus_units_per_hour:
+        type: float
+        required: true
+
+      units_consumed_per_hour:
+        type: float
+        required: true
+
+      units_produced_per_hour:
+        type: float
+        required: true
+
+
+  clearing_remainder:
+    version: 1
+    intent: Unresolved surplus or shortage after clearing
+
+    keys: [company_key, product_key, quality_level]
+
+    fields:
+      company_key:
+        type: int
+        required: true
+
+      product_key:
+        type: int
+        required: true
+
+      quality_level:
+        type: int
+        required: true
+
+      direction:
+        type: text
+        required: true
+
+      remaining_units_per_hour:
+        type: float
+        required: true
+
+
+  clearing_result:
+    version: 1
+    intent: Channel-level allocation results
+
+    keys: [company_key, product_key, quality_level, priority, channel_key]
+
+    fields:
+      company_key:
+        type: int
+        required: true
+
+      product_key:
+        type: int
+        required: true
+
+      quality_level:
+        type: int
+        required: true
+
+      priority:
+        type: int
+        required: true
+
+      channel_key:
+        type: int
+        required: true
+
+      direction:
+        type: text
+        required: true
+
+      allocated_units_per_hour:
+        type: float
+        required: true
+
+
+  product_bom_consumption:
+    version: 1
+    intent: Input consumption derived from production
+
+    keys: [company_key, product_key, quality_level]
+
+    fields:
+      company_key:
+        type: int
+        required: true
+
+      product_key:
+        type: int
+        required: true
+
+      quality_level:
+        type: int
+        required: true
+
+      units_consumed_per_hour:
+        type: float
+        required: true
+
+
+  production_intent:
+    version: 1
+    intent: Final production output per product
+
+    keys: [company_key, product_key, quality_level]
+
+    fields:
+      company_key:
+        type: int
+        required: true
+
+      product_key:
+        type: int
+        required: true
+
+      quality_level:
+        type: int
+        required: true
+
+      units_produced_per_hour:
+        type: float

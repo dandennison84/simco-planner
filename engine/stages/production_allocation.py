@@ -5,7 +5,6 @@ from engine.debug import debug_log, debug_rows
 def _k(x) -> str:
     return ("" if x is None else str(x)).strip()
 
-
 def stage_production_allocation(state: Dict[str, object]) -> Dict[str, object]:
     """
     PRODUCTION ALLOCATION STAGE
@@ -32,6 +31,7 @@ def stage_production_allocation(state: Dict[str, object]) -> Dict[str, object]:
     slot_rows = state.get("slot_context", [])
     plan_rows = state.get("production_plan", [])
     product_rows = state.get("product", [])
+    company_rows = state.get("company", [])
 
     # ---------------------------------------------------------
     # Build lookup indexes
@@ -44,6 +44,11 @@ def stage_production_allocation(state: Dict[str, object]) -> Dict[str, object]:
     product_index = {
         _k(r["product_key"]): r
         for r in product_rows
+    }
+
+    company_index = {
+        _k(r["company_key"]): float(r.get("production_speed_delta", 0.0))
+        for r in company_rows
     }
 
     # ---------------------------------------------------------
@@ -112,7 +117,8 @@ def stage_production_allocation(state: Dict[str, object]) -> Dict[str, object]:
         building_level = float(slot.get("building_level"))
         baseline_output = float(product.get("baseline_output_per_hour"))
 
-        units = building_level * baseline_output * frac
+        prod_speed = 1.0 + company_index.get(ck, 0.0)
+        units = building_level * baseline_output * prod_speed * frac
 
         key = (ck, pk, ql)
         produced[key] = produced.get(key, 0.0) + units
