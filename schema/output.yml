@@ -137,7 +137,7 @@ tables:
 
   production_intent:
     version: 1
-    intent: Final production output per product
+    intent: Production output computed at full capacity (continuous, pre-clearing)
 
     keys: [company_key, product_key, quality_level]
 
@@ -156,6 +156,7 @@ tables:
 
       units_produced_per_hour:
         type: float
+        required: true
 
   product_bom_demand_detail:
     version: 1

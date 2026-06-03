@@ -15,7 +15,7 @@ Rules:
 
 | ID | Task | Layer | Status | Notes |
 |----|------|------|--------|------|
-| T-026 | Refactor template creation process | Engine / UX Layer | Standardize and modularize generation of input/output Excel templates; eliminate duplication, enforce schema-driven structure, and align with naming conventions and table contracts |
+
 ---
 
 ## Backlog
@@ -48,6 +48,7 @@ Rules:
 | T-019 | Implement BOM cycle detection in validation layer | Validation | Detect cycles in product_bom graph and fail execution |
 | T-022 | Enforce explicit retail channel behavior | L5 (Clearing) | Retail allocation only when clearing_plan includes retail channel |
 | T-025 | Add product BOM demand detail trace table | L4 (BOM Consumption) | Emit source-to-demand relationships for recursive BOM to support debugging and matrix/pivot analysis; include (company, source_product, demanded_product, quality, units) |
+| T-026 | Refactor template creation process | Engine / UX Layer | Standardize and modularize generation of input/output Excel templates; eliminate duplication, enforce schema-driven structure, and align with naming conventions and table contracts |
 
 ---
 

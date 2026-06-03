@@ -56,7 +56,7 @@ The engine produces fully resolved fact tables:
 These outputs are:
 
 - deterministic
-- complete (no unresolved internal state)
++ complete (no unresolved imbalance; all imbalance resolved)
 - non-interpretive (no diagnostics or guidance)
 
 They serve as the foundation for all downstream tools.
@@ -133,13 +133,12 @@ References:
 - market_pricing
 
 Outputs:
-- production_plan
+- production_intent
 - product_bom_consumption
 - balance_plan
-- clearing_plan
-- diagnostics
-- guidance
-- signal_evidence
+- clearing_result
+- clearing_remainder
+- allocation_summary
 
 ---
 

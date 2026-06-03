@@ -16,7 +16,7 @@ This document tracks:
 | Phase | Name | Goal | Status |
 |------|------|------|--------|
 | 1 | Foundation | Establish architecture, tooling, and governance | In Progress |
-| 2 | Core Engine | Build staged pipeline (L0–L6) | Not Started |
+| 2 | Core Engine | Build deterministic pipeline (production at full capacity, recursive BOM consumption, balance, and clearing) | Not Started |
 | 3 | Diagnostics | Implement Facts + Signals | Not Started |
 | 4 | Map Health | Implement modeled and observed map performance | Not Started |
 | 5 | VI Planner | Implement steady-state planning logic | Not Started |

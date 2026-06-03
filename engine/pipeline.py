@@ -13,8 +13,6 @@ from engine.stages.production_resolution import stage_production_resolution
 from engine.stages.product_bom_consumption import stage_product_bom_consumption
 from engine.stages.balance import stage_balance
 from engine.stages.clearing_allocation import stage_clearing_allocation
-from engine.stages.production_run_normalization import stage_production_run_normalization
-
 
 # ============================================================
 # Stage: SCENARIO
@@ -38,7 +36,6 @@ def run_pipeline(inputs: ContractInputs) -> ContractOutputs:
     state = stage_system_parameters(state)
     state = stage_structure(state)
     state = stage_production_resolution(state)
-    state = stage_production_run_normalization(state)
     state = stage_product_bom_consumption(state)
     state = stage_balance(state)
     state = stage_clearing_allocation(state)
@@ -52,6 +49,6 @@ def run_pipeline(inputs: ContractInputs) -> ContractOutputs:
             "product_bom_demand_detail": state["product_bom_demand_detail"],
             "balance_plan": state["balance_plan"],
             "clearing_result": state["clearing_result"],
-            "allocation_summary": state["allocation_summary"],  # ✅ ADD THIS
+            "allocation_summary": state["allocation_summary"],
         }
     )
