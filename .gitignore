@@ -234,3 +234,4 @@ __marimo__/
 /data/runtime/
 /template/*.m
 /template/*.backup*
+/template/Template_old.xlsm

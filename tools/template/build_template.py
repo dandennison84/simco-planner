@@ -12,9 +12,9 @@ import win32com.client as win32
 # =============================================================================
 # Paths
 # =============================================================================
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 
-TEMPLATE_SRC = ROOT / "template" / "Template.xlsm"
+TEMPLATE_SRC = ROOT / "tools" / "template" / "Template.xlsm"
 TEMPLATE_DST = ROOT / "template" / "PlannerTemplate.xlsm"
 
 REF_DIR = ROOT / "data" / "reference"
@@ -23,9 +23,6 @@ UI_CONFIG_PATH = ROOT / "schema" / "ui.yml"
 
 # =============================================================================
 # Lookup definitions
-# These drive BOTH:
-#   - Excel dropdowns (named ranges over names)
-#   - Power Query joins (real Excel tables with key + name)
 # =============================================================================
 LOOKUPS = [
     {
@@ -43,7 +40,7 @@ LOOKUPS = [
         "key_col": "product_key",
         "name_col": "product_name",
         "range_name": "nr_ProductNames",
-    },    
+    },
     {
         "sheet_name": "_ref_realm",
         "table_name": "ref_realm",
@@ -60,12 +57,11 @@ LOOKUPS = [
         "name_col": "channel_name",
         "range_name": "nr_ChannelNames",
     },
-
 ]
 
 
 # =============================================================================
-# UI config
+# Helpers
 # =============================================================================
 def load_ui_config(path: Path) -> dict:
     if not path.exists():
@@ -81,15 +77,7 @@ def load_ui_config(path: Path) -> dict:
     return tables
 
 
-# =============================================================================
-# CSV helpers
-# =============================================================================
 def load_lookup_pairs(path: Path, key_col: str, name_col: str) -> list[tuple[str, str]]:
-    """
-    Reads canonical reference CSVs (snake_case headers) and returns rows as:
-        [(key, name), ...]
-    Sorted by name for UI friendliness.
-    """
     if not path.exists():
         raise FileNotFoundError(f"Missing CSV: {path}")
 
@@ -107,19 +95,8 @@ def load_lookup_pairs(path: Path, key_col: str, name_col: str) -> list[tuple[str
 
 
 # =============================================================================
-# Excel helpers
+# Excel helpers (SAFE VERSION)
 # =============================================================================
-def _column_letter(n: int) -> str:
-    """
-    1 -> A, 2 -> B, 27 -> AA
-    """
-    letters = []
-    while n > 0:
-        n, rem = divmod(n - 1, 26)
-        letters.append(chr(65 + rem))
-    return "".join(reversed(letters))
-
-
 def _delete_existing_named_item(wb, name: str) -> None:
     try:
         wb.Names.Item(name).Delete()
@@ -127,10 +104,23 @@ def _delete_existing_named_item(wb, name: str) -> None:
         pass
 
 
-def _delete_existing_sheet_if_present(wb, sheet_name: str) -> None:
+def _get_or_create_sheet(wb, sheet_name: str):
     names = [ws.Name for ws in wb.Worksheets]
+
     if sheet_name in names:
-        wb.Worksheets(sheet_name).Delete()
+        ws = wb.Worksheets(sheet_name)
+
+        # ✅ Clear only contents, do NOT delete sheet
+        try:
+            ws.Cells.ClearContents()
+        except Exception:
+            pass
+
+    else:
+        ws = wb.Worksheets.Add(After=wb.Worksheets(wb.Worksheets.Count))
+        ws.Name = sheet_name
+
+    return ws
 
 
 def create_lookup_sheet_with_table(
@@ -142,18 +132,8 @@ def create_lookup_sheet_with_table(
     name_col: str,
     rows: list[tuple[str, str]],
 ):
-    """
-    Creates:
-      - worksheet named _ref_*
-      - Excel table named ref_* at A1:B{n}
-      - headers = snake_case schema names
-      - data rows = key + name
-    """
-    # Remove any stale sheet in the copied workbook (defensive)
-    _delete_existing_sheet_if_present(wb, sheet_name)
-
-    ws = wb.Worksheets.Add(After=wb.Worksheets(wb.Worksheets.Count))
-    ws.Name = sheet_name
+    # ✅ Get or reset sheet (NO deletion)
+    ws = _get_or_create_sheet(wb, sheet_name)
 
     # headers
     ws.Cells(1, 1).Value = key_col
@@ -167,27 +147,23 @@ def create_lookup_sheet_with_table(
     last_row = max(2, len(rows) + 1)
     table_ref = f"A1:B{last_row}"
 
-    # Remove stale table name if needed (defensive)
-    # Table names live workbook-wide
+    # ✅ Delete TABLE only (safe)
     try:
-        existing = wb.Worksheets(sheet_name).ListObjects(table_name)
+        existing = ws.ListObjects(table_name)
         existing.Delete()
     except Exception:
         pass
 
-    # Create Excel Table so Power Query can consume via Excel.CurrentWorkbook()
+    # Create table
     lo = ws.ListObjects.Add(1, ws.Range(table_ref), None, 1)
     lo.Name = table_name
 
-    # Optional style (safe if available)
     try:
         lo.TableStyle = "TableStyleLight9"
     except Exception:
         pass
 
-    # Hide sheet after creation (Power Query can still read workbook tables)
-    # Change to -1 if you want them visible for debugging.
-    ws.Visible = 2  # xlSheetVeryHidden
+    ws.Visible = 2  # VeryHidden
 
     return ws, len(rows)
 
@@ -199,10 +175,6 @@ def create_name_dropdown_range(
     sheet_name: str,
     row_count: int,
 ):
-    """
-    Creates workbook-level named range over the NAME column only (column B),
-    used for Excel data validation dropdowns.
-    """
     _delete_existing_named_item(wb, range_name)
 
     last_row = max(2, row_count + 1)
@@ -211,54 +183,18 @@ def create_name_dropdown_range(
 
 
 def apply_validation(ws, table_name: str, column_name: str, range_name: str) -> None:
-    """
-    Applies Excel list validation to one UI column.
-    Fails fast with explicit diagnostics if the table or column is missing.
-    """
-
-    # ---------------------------------
-    # Resolve table explicitly
-    # ---------------------------------
-    available_tables = [t.Name for t in ws.ListObjects]
-
-    if table_name not in available_tables:
-        raise RuntimeError(
-            f"UI validation failed: table '{table_name}' was not found on sheet '{ws.Name}'. "
-            f"Available tables: {available_tables}"
-        )
-
     lo = ws.ListObjects(table_name)
-
-    # ---------------------------------
-    # Resolve column explicitly
-    # ---------------------------------
-    available_columns = [lo.ListColumns(i).Name for i in range(1, lo.ListColumns.Count + 1)]
-
-    if column_name not in available_columns:
-        raise RuntimeError(
-            f"UI validation failed: column '{column_name}' was not found in table '{table_name}' "
-            f"on sheet '{ws.Name}'. Available columns: {available_columns}"
-        )
-
     target = lo.ListColumns(column_name).Range
 
-    # ---------------------------------
-    # Reset validation
-    # ---------------------------------
     try:
         target.Validation.Delete()
     except Exception:
         pass
 
-    # Type=3 => list validation
     target.Validation.Add(3, 1, 1, f"={range_name}")
     target.Validation.InCellDropdown = True
 
 
-# =============================================================================
-# UI lookup mapping
-# Keeps only UI wiring here; engine remains schema-driven.
-# =============================================================================
 LOOKUP_TO_RANGE = {
     "building": "nr_BuildingNames",
     "product": "nr_ProductNames",
@@ -274,7 +210,6 @@ def main():
     if not TEMPLATE_SRC.exists():
         raise FileNotFoundError(f"Template not found: {TEMPLATE_SRC}")
 
-    # Deterministic rebuild
     if TEMPLATE_DST.exists():
         TEMPLATE_DST.unlink()
 
@@ -287,9 +222,6 @@ def main():
     wb = xl.Workbooks.Open(str(TEMPLATE_DST))
 
     try:
-        # ---------------------------------------------------------------------
-        # STEP 1: Create _ref_* sheets + Excel tables + dropdown named ranges
-        # ---------------------------------------------------------------------
         for spec in LOOKUPS:
             rows = load_lookup_pairs(
                 spec["csv_path"],
@@ -313,40 +245,25 @@ def main():
                 row_count=len(rows),
             )
 
-        # ---------------------------------------------------------------------
-        # STEP 2: Apply UI validations from schema/ui.yml
-        # ---------------------------------------------------------------------
         ui_tables = load_ui_config(UI_CONFIG_PATH)
         ws_inputs = wb.Worksheets("Inputs")
 
         for table_name, table_spec in ui_tables.items():
-            rules = table_spec.get("validations", []) or []
-            for rule in rules:
-                lookup_name = rule["lookup"]
-                range_name = LOOKUP_TO_RANGE[lookup_name]
-
+            for rule in table_spec.get("validations", []):
                 apply_validation(
                     ws_inputs,
                     table_name,
                     rule["column"],
-                    range_name,
+                    LOOKUP_TO_RANGE[rule["lookup"]],
                 )
-
 
         import time
 
         print("→ Refreshing Power Query...")
-
         wb.RefreshAll()
 
-        # ✅ Allow Excel to start async queries
-        time.sleep(1)
+        time.sleep(5)
 
-        # ✅ Wait a fixed duration (tune this)
-        sleep_seconds = 5   # start with 5–10 depending on data size
-        time.sleep(sleep_seconds)
-
-        print("✅ Refresh window complete")
         wb.Save()
         print("✅ PlannerTemplate.xlsm generated successfully")
 

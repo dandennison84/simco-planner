@@ -10,7 +10,7 @@ from pathlib import Path
 # Configuration
 # =============================================================================
 SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent
+PROJECT_ROOT = SCRIPT_DIR.parents[1]
 
 TEMPLATE_DIR = PROJECT_ROOT / "template"
 RUNTIME_DIR = PROJECT_ROOT / "runtime"
@@ -65,6 +65,10 @@ def fail(msg: str, code: int = 1) -> None:
 def copy_template(src: Path, dst: Path) -> None:
     if not src.exists():
         fail(f"Template workbook not found: {src}")
+
+    if RUNTIME_FILE.exists():
+        RUNTIME_FILE.unlink()
+
     shutil.copy2(src, dst)
 
 
