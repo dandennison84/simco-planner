@@ -9,7 +9,7 @@ from engine.debug import debug_log
 from engine.stages.input import stage_input
 from engine.stages.system_parameters import stage_system_parameters
 from engine.stages.structure import stage_structure
-from engine.stages.production_allocation import stage_production_allocation
+from engine.stages.production_resolution import stage_production_resolution
 from engine.stages.product_bom_consumption import stage_product_bom_consumption
 from engine.stages.balance import stage_balance
 from engine.stages.clearing_allocation import stage_clearing_allocation
@@ -36,7 +36,7 @@ def run_pipeline(inputs: ContractInputs) -> ContractOutputs:
     state = stage_scenario_resolution(state)
     state = stage_system_parameters(state)
     state = stage_structure(state)
-    state = stage_production_allocation(state)
+    state = stage_production_resolution(state)
     state = stage_product_bom_consumption(state)
     state = stage_balance(state)
     state = stage_clearing_allocation(state)

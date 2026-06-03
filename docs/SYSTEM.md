@@ -31,39 +31,35 @@ The engine never reads Excel directly.
 The engine operates as a layered transformation system:
 
 INPUT
-(company_snapshot, financial_snapshot, structure_map, slot_product_assignment, scenario_delta)
-↓
-VALIDATION
-(schema + invariants)
-↓
-SCENARIO RESOLUTION
-(baseline + scenario_delta → resolved state)
-↓
-STRUCTURE
-(building capacity & topology)
-↓
-ALLOCATION
-(slot → product × quality split)
-↓
-PRODUCTION
-(capacity → produced quantities)
-↓
-BOM EXPLOSION
-(production → material consumption)
-↓
-BALANCE
-(produced vs consumed → net)
-↓
-CLEARING
-(resolve surplus / shortage via market channels)
-↓
-ECONOMICS
-(value applied to clearing)
-↓
-DIAGNOSTICS
-(facts → signals → guidance)
-↓
-OUTPUT
+→ VALIDATION
+→ SCENARIO RESOLUTION
+→ STRUCTURE
+→ PRODUCTION_RESOLUTION
+→ BOM_CONSUMPTION
+→ BALANCE
+→ CLEARING
+→ ENGINE OUTPUT
+
+---
+
+### Engine Output (L5)
+
+The engine produces fully resolved fact tables:
+
+- production_intent
+- product_bom_consumption
+- balance_plan
+- clearing_result
+- clearing_remainder
+- allocation_summary
+
+These outputs are:
+
+- deterministic
+- complete (no unresolved internal state)
+- non-interpretive (no diagnostics or guidance)
+
+They serve as the foundation for all downstream tools.
 
 ---
 

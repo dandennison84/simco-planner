@@ -85,4 +85,16 @@ def stage_balance(state: Dict[str, object]) -> Dict[str, object]:
 
     out = dict(state, balance_plan=balance_plan)
     debug_rows(out, "balance", "balance_plan")
+
+    # ---------------------------------------------------------
+    # Invariant: net = produced - consumed
+    # ---------------------------------------------------------
+    for r in balance_plan:
+        produced = r["units_produced_per_hour"]
+        consumed = r["units_consumed_per_hour"]
+        net = r["net_units_per_hour"]
+
+        if abs((produced - consumed) - net) > 1e-6:
+            raise ValueError("Balance invariant violated")
+        
     return out

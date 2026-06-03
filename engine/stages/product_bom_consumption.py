@@ -168,4 +168,12 @@ def stage_product_bom_consumption(state: Dict[str, object]) -> Dict[str, object]
 
     out = dict(state, product_bom_consumption=product_bom_consumption)
     debug_rows(out, "product_bom_consumption", "product_bom_consumption")
+
+    # ---------------------------------------------------------
+    # Invariant: consumption must be non-negative
+    # ---------------------------------------------------------
+    for r in product_bom_consumption:
+        if r["units_consumed_per_hour"] < 0:
+            raise ValueError("Negative consumption detected")
+
     return out

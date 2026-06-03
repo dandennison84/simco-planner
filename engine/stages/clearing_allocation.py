@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from typing import Dict, List, Tuple
+from collections import defaultdict
+
 
 from engine.debug import debug_log, debug_rows
 
@@ -287,4 +289,45 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
 
     debug_rows(out, "clearing_allocation", "clearing_result")
     debug_rows(out, "clearing_allocation", "clearing_remainder")
+
+# ---------------------------------------------------------
+    # Invariant: allocations must match net
+    # ---------------------------------------------------------
+    alloc_sum = defaultdict(float)
+
+    for r in clearing_result:
+        key = (
+            r["company_key"],
+            r["product_key"],
+            r["quality_level"],
+        )
+        alloc_sum[key] += r["allocated_units_per_hour"]
+
+    for r in balance_rows:
+        key = (
+            _k(r["company_key"]),
+            _k(r["product_key"]),
+            _k(r["quality_level"]),
+        )
+
+        expected = abs(_to_float(r["net_units_per_hour"]))
+        actual = alloc_sum.get(key, 0.0)
+
+        remainder = 0.0
+        for rr in clearing_remainder:
+            rr_key = (
+                _k(rr.get("company_key")),
+                _k(rr.get("product_key")),
+                _k(rr.get("quality_level")),
+            )
+            if rr_key == key:
+                remainder += _to_float(rr.get("remaining_units_per_hour"))
+
+        if abs((actual + remainder) - expected) > 1e-6:
+            raise ValueError(f"Clearing invariant violated for {key}")
+
+    for r in clearing_result:
+        if _to_float(r["allocated_units_per_hour"]) < 0:
+            raise ValueError("Negative clearing allocation detected")
+    
     return out

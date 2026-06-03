@@ -190,6 +190,20 @@ slot_key
 product_key  
 signal_code  
 
+---
+
+### Engine Stage Naming
+
+Stages must describe the transformation being performed.
+
+Correct:
+- structure
+- production_resolution
+- product_bom_consumption
+- balance
+- clearing_allocation
+
+"Allocation" must only refer to distribution across channels, not production calculation.
 
 ---
 

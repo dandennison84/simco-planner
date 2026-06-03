@@ -5,11 +5,11 @@ from engine.debug import debug_log, debug_rows
 def _k(x) -> str:
     return ("" if x is None else str(x)).strip()
 
-def stage_production_allocation(state: Dict[str, object]) -> Dict[str, object]:
+def stage_production_resolution(state: Dict[str, object]) -> Dict[str, object]:
     """
-    PRODUCTION ALLOCATION STAGE
+    PRODUCTION RESOLUTION STAGE
 
-    Inputs:
+    Inputs: 
       - slot_context
       - production_plan
       - product
@@ -26,7 +26,7 @@ def stage_production_allocation(state: Dict[str, object]) -> Dict[str, object]:
       - Output = BL * baseline_output * split
     """
 
-    debug_log(state, "[production allocation] start")
+    debug_log(state, "[production resolution] start")
 
     slot_rows = state.get("slot_context", [])
     plan_rows = state.get("production_plan", [])
@@ -137,6 +137,13 @@ def stage_production_allocation(state: Dict[str, object]) -> Dict[str, object]:
     ]
 
     out = dict(state, production_intent=production_intent)
-    debug_rows(out, "production_allocation", "production_intent")
+    debug_rows(out, "production_resolution", "production_intent")
+    
+    # ---------------------------------------------------------
+    # Invariant: production must be non-negative
+    # ---------------------------------------------------------
+    for r in production_intent:
+        if r["units_produced_per_hour"] < 0:
+            raise ValueError("Negative production detected")
 
     return out

@@ -63,9 +63,8 @@ ECONOMICS
 DIAGNOSTICS
 (facts → signals → guidance)
         ↓
-OUTPUT
-(diagnostics, guidance, evidence)
-
+OUTPUT (ENGINE LAYER)
+(production_intent, product_bom_consumption, balance_plan, clearing_result, clearing_remainder, allocation_summary)
 ---
 
 ## Core Idea
@@ -134,13 +133,16 @@ The system operates on a defined set of core data surfaces:
 - product_bom
 - system_parameters
 
-### Outputs
+### Outputs (Engine Layer)
 
-- diagnostics
-- guidance
-- signal_evidence
+- production_intent
+- product_bom_consumption
+- balance_plan
+- clearing_result
+- clearing_remainder
+- allocation_summary
 
-→ Table definitions and contract rules: /docs/DATA_CONTRACTS.md
+Diagnostics, guidance, and signal_evidence are derived in later layers (not part of the engine output contract).
 
 ---
 
@@ -209,9 +211,9 @@ Foundational documentation and architecture are defined.
 
 Next steps:
 
-- implement engine skeleton
-- define first executable scenarios
-- validate core domain rules
+- finalize and document engine output contract
+- align documentation with implemented pipeline
+- prepare diagnostics layer
 
 ---
 
