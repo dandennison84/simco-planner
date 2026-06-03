@@ -15,7 +15,10 @@ def stage_production_resolution(state: Dict[str, object]) -> Dict[str, object]:
       - product
 
     Output:
-      - production_intent
+    - production_intent
+
+    Meaning:
+        Raw capacity-based production before run normalization.
 
     Grain:
       (company_key, product_key, quality_level)
