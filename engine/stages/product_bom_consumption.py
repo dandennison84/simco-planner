@@ -92,10 +92,79 @@ def _normalize_product_bom_rows(bom_rows: List[dict]) -> List[dict]:
 
     return normalized
 
+def _expand_bom_requirements(
+    output_product_key: str,
+    output_quality_level: str,
+    output_units: float,
+    bom_by_output_product: Dict[str, List[dict]],
+    bom_by_output_exact: Dict[Tuple[str, str], List[dict]],
+    path: Tuple[Tuple[str, str], ...] = (),
+) -> List[Tuple[str, str, float]]:
+    """
+    Recursively expand BOM requirements until terminal inputs are reached.
+
+    Returns a flat list of:
+      (input_product_key, input_quality_level, required_units)
+
+    Rules:
+      - if exact (product_key, quality_level) BOM exists, use it
+      - else use generic BOM by product_key
+      - if an input product has no BOM rows, it is terminal and emitted
+      - input_quality_level defaults to current output_quality_level when blank
+    """
+
+    current_node = (output_product_key, output_quality_level)
+
+    if current_node in path:
+        raise ValueError(
+            f"Cycle detected during BOM expansion at product={output_product_key}, quality={output_quality_level}"
+        )
+
+    requirements = bom_by_output_exact.get((output_product_key, output_quality_level))
+    if requirements is None:
+        requirements = bom_by_output_product.get(output_product_key, [])
+
+    # terminal product
+    if not requirements:
+        return [(output_product_key, output_quality_level, output_units)]
+
+    expanded: List[Tuple[str, str, float]] = []
+
+    for req in requirements:
+        qty = _to_float(req.get("input_units_per_output"))
+        if qty <= 0:
+            raise ValueError(
+                f"product_bom invalid for output_product_key={output_product_key}: "
+                f"input_units_per_output must be > 0"
+            )
+
+        input_product_key = _k(req.get("input_product_key"))
+        input_quality_level = _k(req.get("input_quality_level")) or output_quality_level
+        required_units = output_units * qty
+
+        child_exact = bom_by_output_exact.get((input_product_key, input_quality_level))
+        child_generic = bom_by_output_product.get(input_product_key, [])
+
+        # ALWAYS emit this level (intermediate demand)
+        expanded.append((input_product_key, input_quality_level, required_units))
+
+        if child_exact is not None or child_generic:
+            expanded.extend(
+                _expand_bom_requirements(
+                    input_product_key,
+                    input_quality_level,
+                    required_units,
+                    bom_by_output_product,
+                    bom_by_output_exact,
+                    path=path + (current_node,),
+                )
+            )
+
+    return expanded
 
 def stage_product_bom_consumption(state: Dict[str, object]) -> Dict[str, object]:
     """
-    Computes direct BOM consumption implied by unconstrained production_intent.
+    Computes fully expanded BOM consumption implied by unconstrained production_intent.
 
     Inputs:
       - production_intent
@@ -108,10 +177,11 @@ def stage_product_bom_consumption(state: Dict[str, object]) -> Dict[str, object]
       (company_key, product_key, quality_level)
 
     Rules:
-      - consumption = sum(units_produced_per_hour * input_units_per_output)
+      - consumption is recursively expanded across all BOM levels
       - if BOM row specifies output_quality_level, it only matches that output QL
-      - if BOM row specifies input_quality_level, that becomes the consumption QL
+      - if BOM row specifies input_quality_level, that becomes the input QL
       - otherwise input consumption QL defaults to produced row quality_level
+      - only terminal inputs are emitted into product_bom_consumption
     """
     debug_log(state, "[product_bom_consumption] start")
 
@@ -138,23 +208,20 @@ def stage_product_bom_consumption(state: Dict[str, object]) -> Dict[str, object]
         output_quality_level = _k(row.get("quality_level"))
         produced_units = _to_float(row.get("units_produced_per_hour"))
 
-        requirements = bom_by_output_exact.get((output_product_key, output_quality_level))
-        if requirements is None:
-            requirements = bom_by_output_product.get(output_product_key, [])
+        if produced_units <= 0:
+            continue
 
-        for req in requirements:
-            qty = _to_float(req.get("input_units_per_output"))
-            if qty <= 0:
-                raise ValueError(
-                    f"product_bom invalid for output_product_key={output_product_key}: "
-                    f"input_units_per_output must be > 0"
-                )
+        expanded_inputs = _expand_bom_requirements(
+            output_product_key=output_product_key,
+            output_quality_level=output_quality_level,
+            output_units=produced_units,
+            bom_by_output_product=bom_by_output_product,
+            bom_by_output_exact=bom_by_output_exact,
+        )
 
-            input_product_key = _k(req.get("input_product_key"))
-            input_quality_level = _k(req.get("input_quality_level")) or output_quality_level
-
+        for input_product_key, input_quality_level, required_units in expanded_inputs:
             key = (company_key, input_product_key, input_quality_level)
-            consumption_map[key] = consumption_map.get(key, 0.0) + (produced_units * qty)
+            consumption_map[key] = consumption_map.get(key, 0.0) + required_units
 
     product_bom_consumption = [
         {
