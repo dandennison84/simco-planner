@@ -16,7 +16,7 @@ Rules:
 | ID | Task | Layer | Status | Notes |
 |----|------|------|--------|------|
 | T-004 | Add core unit tests | tooling | In Progress | TOOLING.md |
-| T-019 | Implement BOM cycle detection in validation layer | Validation | Detect cycles in product_bom graph and fail execution |
+| T-022 | Enforce explicit retail channel behavior | L5 (Clearing) | Retail allocation only when clearing_plan includes retail channel |
 
 ---
 
@@ -24,7 +24,6 @@ Rules:
 
 | ID | Task | Layer | Notes |
 |----|------|------|------|
-| T-022 | Enforce explicit retail channel behavior | L5 (Clearing) | Retail allocation only when clearing_plan includes retail channel |
 | T-005 | Functional coding audit | All | ARCHITECTURE, DECISIONS |
 | T-025 | Add product BOM demand detail trace table | L4 (BOM Consumption) | Emit source-to-demand relationships for recursive BOM to support debugging and matrix/pivot analysis; include (company, source_product, demanded_product, quality, units) |
 
@@ -48,6 +47,7 @@ Rules:
 | T-020 | Enforce strict clearing completeness | L5 (Clearing) | Fail if any imbalance remains |
 | T-014 | Implement multi-level BOM explosion with cycle detection | L4 (BOM Consumption) | Recursive expansion; full upstream consumption |
 | T-016 | Implement BOM input rounding and production run consistency | L3–L4 | Integer input consumption; introduce production runs |
+| T-019 | Implement BOM cycle detection in validation layer | Validation | Detect cycles in product_bom graph and fail execution |
 
 ---
 

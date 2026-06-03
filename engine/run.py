@@ -175,6 +175,50 @@ def _validate_output_non_empty(validated_outputs: Dict[str, List[dict]]):
     if not validated_outputs.get("production_intent"):
         raise SystemExit("FATAL: production_intent is empty")
         
+def _validate_bom_cycles(state: Dict[str, object]) -> None:
+    """
+    Detect cycles in product_bom using DFS.
+
+    Raises ValueError if any cycle is found.
+    """
+
+    bom_rows = state.get("product_bom", [])
+
+    # Build adjacency list
+    graph: Dict[str, List[str]] = {}
+
+    for r in bom_rows:
+        output_product = str(r.get("product_key")).strip()
+        input_product = str(r.get("input_product_key")).strip()
+
+        if output_product == "" or input_product == "":
+            continue
+
+        graph.setdefault(output_product, []).append(input_product)
+
+    visited: set[str] = set()
+    stack: set[str] = set()
+
+    def dfs(node: str):
+        if node in stack:
+            raise ValueError(f"BOM cycle detected at product={node}")
+
+        if node in visited:
+            return
+
+        stack.add(node)
+
+        for neighbor in graph.get(node, []):
+            dfs(neighbor)
+
+        stack.remove(node)
+        visited.add(node)
+
+    # Check all nodes
+    for node in graph:
+        if node not in visited:
+            dfs(node)
+
 # =============================================================================
 # Build debug-aware state (KEY FIX)
 # =============================================================================
@@ -353,6 +397,7 @@ def main(env: str | None = None) -> int:
     _validate_required_inputs_non_empty(validated_inputs)
     _validate_logical_completeness(validated_inputs, validated_refs)
     _validate_empty_table_semantics(validated_inputs)
+    _validate_bom_cycles(validated_inputs)
 
     _debug_loaded_tables(debug_state)
 
