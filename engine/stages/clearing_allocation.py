@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Dict, List, Tuple
 from collections import defaultdict
 
-
 from engine.debug import debug_log, debug_rows
 
 
@@ -27,6 +26,7 @@ def _to_int(x, default: int = 0) -> int:
     if s == "":
         return default
     return int(s)
+
 
 def _build_retail_capacity_map(state):
     company_rows = state.get("company", [])
@@ -57,7 +57,8 @@ def _build_retail_capacity_map(state):
                 capacity_map[(company_key, pk, ql)] = base * (1.0 + delta)
 
     return capacity_map
-    
+
+
 def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
     """
     Sequential waterfall allocation for surplus / shortage.
@@ -70,9 +71,9 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
       - retail_prices
 
     Outputs:
-    - clearing_result
-    - allocation_summary
-    
+      - clearing_result
+      - allocation_summary
+
     Grain:
       clearing_result:
         (company_key, product_key, quality_level, priority, channel_key)
@@ -87,6 +88,8 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
       - allocation_frac is applied to REMAINING
       - if channel uses retail capacity:
             cap = baseline_retail_units * (1 + sales_speed_delta)
+      - only channels explicitly declared in clearing_plan may be used
+      - any unresolved imbalance is an error
     """
     debug_log(state, "[clearing_allocation] start")
 
@@ -122,7 +125,7 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
 
         total_initial = abs(net)
         retail_alloc = 0.0
-        contract_alloc = 0.0
+        non_retail_alloc = 0.0
 
         if abs(net) <= 1e-12:
             continue
@@ -135,7 +138,10 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
             raise ValueError(
                 f"No clearing rules for company={company_key}, product={product_key}, quality={quality_level}, remaining={remaining}"
             )
-        
+
+        # Only channels declared in clearing_plan may ever be used
+        declared_channel_keys = {_k(r.get("channel_key")) for r in rules}
+
         # validate unique priorities within product
         priorities = [_to_int(r.get("priority")) for r in rules]
         if len(priorities) != len(set(priorities)):
@@ -155,6 +161,12 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
             if channel_key not in channel_index:
                 raise ValueError(
                     f"clearing_plan references unknown channel_key={channel_key}"
+                )
+
+            if channel_key not in declared_channel_keys:
+                raise ValueError(
+                    f"Channel used outside clearing_plan "
+                    f"(company={company_key}, product={product_key}, quality={quality_level}, channel={channel_key})"
                 )
 
             ch = channel_index[channel_key]
@@ -203,11 +215,10 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
             remaining -= allocated
             allocated_so_far[channel_key] = allocated_so_far.get(channel_key, 0.0) + allocated
 
-            # semantic tracking for debug summary (no hardcoded channel ids)
             if is_retail:
                 retail_alloc += allocated
             else:
-                contract_alloc += allocated
+                non_retail_alloc += allocated
 
             clearing_result.append(
                 {
@@ -229,26 +240,26 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
                 f"Incomplete clearing for company={company_key}, product={product_key}, quality={quality_level}, remaining={remaining}"
             )
 
-
-        # debug summary (level 2)
         capped = retail_alloc < total_initial and retail_alloc > 0
 
-        allocation_summary.append({
-            "company_key": company_key,
-            "product_key": product_key,
-            "quality_level": quality_level,
-            "total_units_per_hour": total_initial,
-            "retail_units_per_hour": retail_alloc,
-            "non_retail_units_per_hour": contract_alloc,
-            "is_retail_capped": capped,
-        })            
+        allocation_summary.append(
+            {
+                "company_key": company_key,
+                "product_key": product_key,
+                "quality_level": quality_level,
+                "total_units_per_hour": total_initial,
+                "retail_units_per_hour": retail_alloc,
+                "non_retail_units_per_hour": non_retail_alloc,
+                "is_retail_capped": capped,
+            }
+        )
 
         debug_log(
             state,
             f"[check] company={company_key} product={product_key} "
-            f"total={round(total_initial,4)} "
-            f"retail={round(retail_alloc,4)} "
-            f"contract={round(contract_alloc,4)} "
+            f"total={round(total_initial, 4)} "
+            f"retail={round(retail_alloc, 4)} "
+            f"contract={round(non_retail_alloc, 4)} "
             f"capped={capped}",
             level=2,
         )
@@ -261,7 +272,7 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
 
     debug_rows(out, "clearing_allocation", "clearing_result")
 
-# ---------------------------------------------------------
+    # ---------------------------------------------------------
     # Invariant: allocations must match net
     # ---------------------------------------------------------
     alloc_sum = defaultdict(float)
@@ -286,5 +297,5 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
 
         if abs(actual - expected) > 1e-6:
             raise ValueError(f"Clearing invariant violated for {key}")
-    
+
     return out
