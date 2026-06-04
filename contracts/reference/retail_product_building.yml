@@ -1,0 +1,24 @@
+kind: table
+version: 1
+table: retail_product_building
+surface: reference
+intent: Retail building compatibility
+
+presence:
+  required: true
+  non_empty: true
+
+keys:
+  - product_key
+  - building_key
+
+fields:
+  product_key:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  building_key:
+    type: int
+    required: true
+    constraints: { min: 1 }

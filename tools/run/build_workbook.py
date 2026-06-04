@@ -21,11 +21,11 @@ def main(argv) -> int:
     python = sys.executable
 
     steps = [
-        ("Build Template", [python, "tools/template/build_template.py"]),
-        ("Generate Workbook", [python, "tools/template/generate_workbook.py"]),
-        ("Export Inputs", [python, "tools/run/export_inputs.py"]),
+        ("Build Template", [python, "-m", "tools.template.build_template"]),
+        ("Generate Workbook", [python, "-m", "tools.template.generate_workbook"]),
+        ("Export Inputs", [python, "-m", "tools.run.export_inputs"]),
     ]
-
+    
     for label, cmd in steps:
         run_step(label, cmd)
 

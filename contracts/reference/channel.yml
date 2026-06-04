@@ -1,0 +1,52 @@
+kind: table
+version: 1
+table: channel
+surface: reference
+intent: Channel Domain
+
+presence:
+  required: true
+  non_empty: true
+
+keys:
+  - channel_key
+
+fields:
+  channel_key:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  channel_name:
+    type: string
+    required: true
+
+  fee_fraction:
+    type: float
+    required: false
+    constraints: { min: 0 }
+
+  transport_type:
+    type: string
+    required: true
+
+  transport_multiplier:
+    type: float
+    required: false
+    constraints: { min: 0 }
+
+  contract_discount_allowed:
+    type: boolean
+    required: true
+
+  uses_retail_capacity:
+    type: boolean
+    required: true
+
+  can_source:
+    type: boolean
+    required: true
+
+  can_sink:
+    type: boolean
+    required: true

@@ -1,21 +1,55 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any
 from engine.debug import debug_log, debug_rows
 
 
 def _k(x) -> str:
     return ("" if x is None else str(x)).strip()
 
+
+def _require_float(
+    row: Dict[str, Any],
+    field: str,
+    *,
+    stage: str,
+    row_idx: int | None = None,
+    context: str = "",
+) -> float:
+    value = row.get(field, None)
+
+    if value is None or value == "":
+        raise ValueError(
+            f"[{stage}:error]\n"
+            f"  field={field}\n"
+            f"  row={row_idx}\n"
+            f"  value={value}\n"
+            f"  context={context}\n"
+            f"  reason=missing float value"
+        )
+
+    try:
+        return float(value)
+    except Exception:
+        raise ValueError(
+            f"[{stage}:error]\n"
+            f"  field={field}\n"
+            f"  row={row_idx}\n"
+            f"  value={value}\n"
+            f"  context={context}\n"
+            f"  reason=invalid float value"
+        )
+
+
 def stage_production_resolution(state: Dict[str, object]) -> Dict[str, object]:
     """
     PRODUCTION RESOLUTION STAGE
 
-    Inputs: 
+    Inputs:
       - slot_context
       - production_plan
       - product
 
     Output:
-    - production_intent
+      - production_intent
 
     Meaning:
         Raw capacity-based production before run normalization.
@@ -28,6 +62,7 @@ def stage_production_resolution(state: Dict[str, object]) -> Dict[str, object]:
       - Product must match building
       - Output = BL * baseline_output * split
     """
+    stage_name = "production_resolution"
 
     debug_log(state, "[production resolution] start")
 
@@ -50,7 +85,12 @@ def stage_production_resolution(state: Dict[str, object]) -> Dict[str, object]:
     }
 
     company_index = {
-        _k(r["company_key"]): float(r.get("production_speed_delta", 0.0))
+        _k(r["company_key"]): _require_float(
+            r,
+            "production_speed_delta",
+            stage=stage_name,
+            context=f"company_key={_k(r.get('company_key'))}",
+        )
         for r in company_rows
     }
 
@@ -59,13 +99,20 @@ def stage_production_resolution(state: Dict[str, object]) -> Dict[str, object]:
     # ---------------------------------------------------------
     split_totals: Dict[Tuple[str, str], float] = {}
 
-    for r in plan_rows:
+    for i, r in enumerate(plan_rows, start=1):
         if not r.get("enabled", True):
             continue
 
         ck = _k(r.get("company_key"))
         sk = _k(r.get("slot_key"))
-        frac = float(r.get("production_split_fraction"))
+
+        frac = _require_float(
+            r,
+            "production_split_frac",
+            stage=stage_name,
+            row_idx=i,
+            context=f"company_key={ck}, slot_key={sk}",
+        )
 
         key = (ck, sk)
         split_totals[key] = split_totals.get(key, 0.0) + frac
@@ -73,7 +120,11 @@ def stage_production_resolution(state: Dict[str, object]) -> Dict[str, object]:
     for (ck, sk), total in split_totals.items():
         if abs(total - 1.0) > 1e-9:
             raise ValueError(
-                f"production_plan split must equal 1.0 for company={ck}, slot={sk}, got {total}"
+                f"[{stage_name}:error]\n"
+                f"  field=production_split_frac\n"
+                f"  context=company_key={ck}, slot_key={sk}\n"
+                f"  reason=slot splits must equal 1.0\n"
+                f"  value={total}"
             )
 
     # ---------------------------------------------------------
@@ -89,12 +140,22 @@ def stage_production_resolution(state: Dict[str, object]) -> Dict[str, object]:
         sk = _k(r.get("slot_key"))
         pk = _k(r.get("product_key"))
         ql = _k(r.get("quality_level"))
-        frac = float(r.get("production_split_fraction"))
+
+        frac = _require_float(
+            r,
+            "production_split_frac",
+            stage=stage_name,
+            row_idx=i,
+            context=f"company_key={ck}, slot_key={sk}, product_key={pk}, quality_level={ql}",
+        )
 
         # Validate slot exists
         if (ck, sk) not in slot_index:
             raise ValueError(
-                f"production_plan row {i}: no slot_context for company={ck}, slot={sk}"
+                f"[{stage_name}:error]\n"
+                f"  row={i}\n"
+                f"  context=company_key={ck}, slot_key={sk}\n"
+                f"  reason=no slot_context match"
             )
 
         slot = slot_index[(ck, sk)]
@@ -102,7 +163,11 @@ def stage_production_resolution(state: Dict[str, object]) -> Dict[str, object]:
         # Validate product exists
         if pk not in product_index:
             raise ValueError(
-                f"production_plan row {i}: product_key={pk} not found in product"
+                f"[{stage_name}:error]\n"
+                f"  row={i}\n"
+                f"  field=product_key\n"
+                f"  value={pk}\n"
+                f"  reason=product_key not found in product"
             )
 
         product = product_index[pk]
@@ -113,12 +178,30 @@ def stage_production_resolution(state: Dict[str, object]) -> Dict[str, object]:
 
         if product_building and slot_building != product_building:
             raise ValueError(
-                f"production_plan row {i}: product/building mismatch "
-                f"(company={ck}, slot={sk}, slot_building={slot_building}, product_building={product_building})"
+                f"[{stage_name}:error]\n"
+                f"  row={i}\n"
+                f"  reason=product/building mismatch\n"
+                f"  company_key={ck}\n"
+                f"  slot_key={sk}\n"
+                f"  slot_building={slot_building}\n"
+                f"  product_building={product_building}"
             )
 
-        building_level = float(slot.get("building_level"))
-        baseline_output = float(product.get("baseline_output_per_hour"))
+        building_level = _require_float(
+            slot,
+            "building_level",
+            stage=stage_name,
+            row_idx=i,
+            context=f"company_key={ck}, slot_key={sk}",
+        )
+
+        baseline_output = _require_float(
+            product,
+            "baseline_output_per_hour",
+            stage=stage_name,
+            row_idx=i,
+            context=f"product_key={pk}",
+        )
 
         prod_speed = 1.0 + company_index.get(ck, 0.0)
         units = building_level * baseline_output * prod_speed * frac
@@ -141,12 +224,12 @@ def stage_production_resolution(state: Dict[str, object]) -> Dict[str, object]:
 
     out = dict(state, production_intent=production_intent)
     debug_rows(out, "production_resolution", "production_intent")
-    
+
     # ---------------------------------------------------------
     # Invariant: production must be non-negative
     # ---------------------------------------------------------
     for r in production_intent:
         if r["units_produced_per_hour"] < 0:
-            raise ValueError("Negative production detected")
+            raise ValueError("[production_resolution:error]\n  reason=negative production detected")
 
     return out

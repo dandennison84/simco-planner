@@ -1,0 +1,29 @@
+kind: table
+version: 1
+table: product_bom
+surface: reference
+intent: Product BOM
+
+presence:
+  required: true
+  non_empty: true
+
+keys:
+  - product_key
+  - input_product_key
+
+fields:
+  product_key:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  input_product_key:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  input_quantity:
+    type: float
+    required: true
+    constraints: { min: 0 }

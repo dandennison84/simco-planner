@@ -1,0 +1,38 @@
+kind: table
+version: 1
+table: map_structure
+surface: input
+intent: Defines map composition at slot level
+
+presence:
+  required: true
+  non_empty: true
+
+keys:
+  - company_key
+  - slot_key
+
+fields:
+  company_key:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  slot_key:
+    type: int
+    required: true
+    constraints: { min: 1, max: 18 }
+
+  building_key:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  building_level:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  robots_installed:
+    type: boolean
+    required: true

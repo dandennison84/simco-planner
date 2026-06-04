@@ -1,0 +1,41 @@
+kind: table
+version: 1
+table: production_plan
+surface: input
+intent: Defines production allocation per slot
+
+presence:
+  required: true
+  non_empty: true
+
+keys:
+  - company_key
+  - slot_key
+  - product_key
+  - quality_level
+
+fields:
+  company_key:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  slot_key:
+    type: int
+    required: true
+    constraints: { min: 1, max: 18 }
+
+  product_key:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  quality_level:
+    type: int
+    required: true
+    constraints: { min: 0 }
+
+  production_split_frac:
+    type: float
+    required: true
+    constraints: { min: 0, max: 1 }

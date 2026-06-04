@@ -2,59 +2,74 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Tuple
 
-from engine.debug import debug_log
+from engine.debug import debug_log, debug_enabled
+
+
+# =============================================================================
+# Debug
+# =============================================================================
 
 def debug_validate_result(
     state: Dict[str, object],
     table_name: str,
     result: Dict[str, Any],
 ) -> None:
-    """
-    Debug wrapper for validate_table output.
-
-    Level 1:
-      - prints row counts summary
-
-    Level 2:
-      - prints first few errors (if any)
-
-    Does NOT mutate result.
-    """
-
-    log = result.get("log", {})
+    log = result.get("log", {}) or {}
 
     rows_read = log.get("rows_read", 0)
     rows_valid = log.get("rows_valid", 0)
     rows_invalid = log.get("rows_invalid", 0)
-    errors = log.get("errors", [])
+    errors = log.get("errors", []) or []
+    missing_columns = log.get("missing_columns", []) or []
+    extra_columns = log.get("extra_columns", []) or []
 
-    # ✅ Level 1 summary
-    debug_log(
-        state,
-        f"[validate] {table_name}: read={rows_read} valid={rows_valid} invalid={rows_invalid}",
-        level=1
-    )
+    # -------------------------------------------------------------------------
+    # ALWAYS: summary (not debug)
+    # -------------------------------------------------------------------------
+    # Only show summary if:
+    # - there are errors
+    # - OR debug level >= 1
+    if rows_invalid > 0 or debug_enabled(state, 1):
+        print(
+            f"[validate] {table_name}: "
+            f"read={rows_read} valid={rows_valid} invalid={rows_invalid}"
+        )
+    
 
-    # ✅ Level 2 detail (first few errors only)
+    # -------------------------------------------------------------------------
+    # ALWAYS: sample row-level errors
+    # -------------------------------------------------------------------------
     if errors:
         sample = errors[:5]
+
         for e in sample:
-            debug_log(
-                state,
-                f"[validate:{table_name}] row={e.get('row')} field={e.get('field')} error={e.get('error')}",
-                level=2
+            print(
+                f"[validate:{table_name}] "
+                f"row={e.get('row')} field={e.get('field')} error={e.get('error')}"
             )
 
         if len(errors) > 5:
-            debug_log(
-                state,
-                f"[validate:{table_name}] ... {len(errors) - 5} more errors",
-                level=2
+            print(
+                f"[validate:{table_name}] ... {len(errors) - 5} more errors"
+            )
+
+    # -------------------------------------------------------------------------
+    # ALWAYS: structural mismatch (critical signal)
+    # -------------------------------------------------------------------------
+
+    # Only show if:
+    # - real structural error (missing fields)
+    # - OR debug level >= 2
+    if missing_columns or debug_enabled(state, 2):
+        if missing_columns or extra_columns:
+            print(
+                f"[validate:{table_name}] column mismatch\n"
+                f"  missing={missing_columns}\n"
+                f"  extra_columns={extra_columns}"
             )
 
 # =============================================================================
 # Coercion
-# enforce int always ≥ 0 if desired (optional domain constraint)
 # =============================================================================
 
 def _coerce(value: Any, target_type: str) -> Tuple[bool, Any, str]:
@@ -84,7 +99,6 @@ def _coerce(value: Any, target_type: str) -> Tuple[bool, Any, str]:
 
     if t == "int":
         try:
-            # Reject float-like strings for ints
             if "." in raw:
                 return False, None, "not an int"
             return True, int(raw), ""
@@ -97,7 +111,7 @@ def _coerce(value: Any, target_type: str) -> Tuple[bool, Any, str]:
         except Exception:
             return False, None, "not a float"
 
-    if t == "logical":
+    if t == "boolean":
         lowered = raw.lower()
 
         if lowered in {"true", "1", "yes", "y"}:
@@ -106,7 +120,7 @@ def _coerce(value: Any, target_type: str) -> Tuple[bool, Any, str]:
         if lowered in {"false", "0", "no", "n"}:
             return True, False, ""
 
-        return False, None, "not a logical"
+        return False, None, "not a boolean"
 
     return False, None, f"unknown type '{target_type}'"
 
@@ -114,6 +128,7 @@ def _coerce(value: Any, target_type: str) -> Tuple[bool, Any, str]:
 # =============================================================================
 # Schema helpers
 # =============================================================================
+
 def _get_fields(schema: Dict[str, Any] | None) -> Dict[str, Dict[str, Any]]:
     if not schema:
         return {}
@@ -136,10 +151,6 @@ def _get_keys(schema: Dict[str, Any] | None) -> List[str]:
     return keys
 
 
-def _get_required_fields(fields: Dict[str, Dict[str, Any]]) -> List[str]:
-    return [name for name, spec in fields.items() if bool((spec or {}).get("required", False))]
-
-
 def _get_unique_fields(fields: Dict[str, Dict[str, Any]]) -> List[str]:
     return [name for name, spec in fields.items() if bool((spec or {}).get("unique", False))]
 
@@ -147,6 +158,7 @@ def _get_unique_fields(fields: Dict[str, Dict[str, Any]]) -> List[str]:
 # =============================================================================
 # Validation
 # =============================================================================
+
 def validate_table(rows: List[Dict[str, Any]], schema: Dict[str, Any] | None) -> Dict[str, Any]:
     """
     Strict, pure table validator.
@@ -164,6 +176,8 @@ def validate_table(rows: List[Dict[str, Any]], schema: Dict[str, Any] | None) ->
               "rows_read": int,
               "rows_valid": int,
               "rows_invalid": int,
+              "missing_columns": [...],
+              "extra_columns": [...],
               "errors": [...],
               "warnings": [...]
           },
@@ -179,6 +193,8 @@ def validate_table(rows: List[Dict[str, Any]], schema: Dict[str, Any] | None) ->
         "rows_read": len(rows),
         "rows_valid": 0,
         "rows_invalid": 0,
+        "missing_columns": [],
+        "extra_columns": [],
         "errors": [],
         "warnings": [],
     }
@@ -197,7 +213,6 @@ def validate_table(rows: List[Dict[str, Any]], schema: Dict[str, Any] | None) ->
 
     fields = _get_fields(schema)
     keys = _get_keys(schema)
-    required_fields = _get_required_fields(fields)
     unique_fields = _get_unique_fields(fields)
 
     schema_columns = list(fields.keys())
@@ -207,6 +222,9 @@ def validate_table(rows: List[Dict[str, Any]], schema: Dict[str, Any] | None) ->
     seen_keys: set[tuple[Any, ...]] = set()
 
     typed_rows: List[Dict[str, Any]] = []
+
+    global_missing: set[str] = set()
+    global_unexpected: set[str] = set()
 
     for idx, row in enumerate(rows, start=1):
         row_errors: List[Dict[str, Any]] = []
@@ -220,6 +238,9 @@ def validate_table(rows: List[Dict[str, Any]], schema: Dict[str, Any] | None) ->
         missing_columns = [col for col in schema_columns if col not in row_column_set]
         extra_columns = [col for col in row_column_set if col not in schema_column_set]
 
+        global_missing.update(missing_columns)
+        global_unexpected.update(extra_columns)
+
         for col in missing_columns:
             row_errors.append({
                 "row": idx,
@@ -227,12 +248,11 @@ def validate_table(rows: List[Dict[str, Any]], schema: Dict[str, Any] | None) ->
                 "error": "missing schema column",
             })
 
-        for col in extra_columns:
-            row_errors.append({
-                "row": idx,
-                "field": col,
-                "error": "unexpected column",
-            })
+        # ✅ Track for debug visibility
+        global_unexpected.update(extra_columns)
+
+        # ✅ DO NOT error on extra columns
+        # (they are UI/helper fields)
 
         # ---------------------------------------------------------------------
         # Field typing + constraints
@@ -255,11 +275,9 @@ def validate_table(rows: List[Dict[str, Any]], schema: Dict[str, Any] | None) ->
                         "error": err,
                     })
                 else:
-                    # optional field missing/blank -> keep as None
                     typed_row[col] = None
                 continue
 
-            # Numeric constraints
             if isinstance(coerced, (int, float)):
                 if "min" in constraints and coerced < constraints["min"]:
                     row_errors.append({
@@ -301,8 +319,6 @@ def validate_table(rows: List[Dict[str, Any]], schema: Dict[str, Any] | None) ->
         if keys:
             key_tuple = tuple(typed_row.get(k, None) for k in keys)
 
-            # If any key member is missing/null, that is already invalid
-            # through required/type validation if schema is correct.
             if None not in key_tuple:
                 if key_tuple in seen_keys:
                     row_errors.append({
@@ -323,6 +339,9 @@ def validate_table(rows: List[Dict[str, Any]], schema: Dict[str, Any] | None) ->
             log["rows_valid"] += 1
 
         typed_rows.append(typed_row)
+
+    log["missing_columns"] = sorted(global_missing)
+    log["extra_columns"] = sorted(global_unexpected)
 
     valid = len(log["errors"]) == 0
 

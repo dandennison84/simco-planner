@@ -1,0 +1,35 @@
+kind: table
+version: 1
+table: exchange_prices
+surface: reference
+intent: Exchange prices
+
+presence:
+  required: true
+  non_empty: true
+
+keys:
+  - realm_key
+  - product_key
+  - quality_level
+
+fields:
+  realm_key:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  product_key:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  quality_level:
+    type: int
+    required: true
+    constraints: { min: 0 }
+
+  unit_price:
+    type: float
+    required: true
+    constraints: { min: 0 }

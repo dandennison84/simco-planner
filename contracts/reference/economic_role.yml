@@ -1,0 +1,22 @@
+kind: table
+version: 1
+table: economic_role
+surface: reference
+intent: Economic roles
+
+presence:
+  required: true
+  non_empty: true
+
+keys:
+  - economic_role_key
+
+fields:
+  economic_role_key:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  economic_role_name:
+    type: string
+    required: true

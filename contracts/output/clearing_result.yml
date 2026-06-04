@@ -1,0 +1,45 @@
+kind: table
+version: 1
+table: clearing_result
+surface: output
+intent: Channel-level allocation results
+
+presence:
+  required: true
+  non_empty: false
+
+keys:
+  - company_key
+  - product_key
+  - quality_level
+  - priority
+  - channel_key
+
+fields:
+  company_key:
+    type: int
+    required: true
+
+  product_key:
+    type: int
+    required: true
+
+  quality_level:
+    type: int
+    required: true
+
+  priority:
+    type: int
+    required: true
+
+  channel_key:
+    type: int
+    required: true
+
+  direction:
+    type: string
+    required: true
+
+  allocated_units_per_hour:
+    type: float
+    required: true

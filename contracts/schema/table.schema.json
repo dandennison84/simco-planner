@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["kind", "version", "table", "surface", "intent", "presence", "keys", "fields"],
+  "additionalProperties": false,
+
+  "properties": {
+    "kind": {
+      "const": "table"
+    },
+    "version": {
+      "type": "integer"
+    },
+    "table": {
+      "type": "string"
+    },
+    "surface": {
+      "type": "string",
+      "enum": ["input", "reference", "output", "internal"]
+    },
+    "intent": {
+      "type": "string"
+    },
+
+    "presence": {
+      "type": "object",
+      "required": ["required", "non_empty"],
+      "additionalProperties": false,
+      "properties": {
+        "required": { "type": "boolean" },
+        "non_empty": { "type": "boolean" }
+      }
+    },
+
+    "keys": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+
+    "fields": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["type", "required"],
+        "additionalProperties": false,
+
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["string", "int", "float", "boolean"]
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "unique": {
+            "type": "boolean"
+          },
+          "constraints": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "min": { "type": "number" },
+              "max": { "type": "number" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

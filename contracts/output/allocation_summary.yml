@@ -1,0 +1,43 @@
+kind: table
+version: 1
+table: allocation_summary
+surface: output
+intent: Allocation breakdown by retail vs non-retail
+
+presence:
+  required: true
+  non_empty: false
+
+keys:
+  - company_key
+  - product_key
+  - quality_level
+
+fields:
+  company_key:
+    type: int
+    required: true
+
+  product_key:
+    type: int
+    required: true
+
+  quality_level:
+    type: int
+    required: true
+
+  total_units_per_hour:
+    type: float
+    required: true
+
+  retail_units_per_hour:
+    type: float
+    required: true
+
+  non_retail_units_per_hour:
+    type: float
+    required: true
+
+  is_retail_capped:
+    type: boolean
+    required: true

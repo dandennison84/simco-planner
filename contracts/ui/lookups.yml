@@ -1,0 +1,94 @@
+kind: lookup_mapping
+version: 1
+intent: UI lookup validation mappings for Excel tables
+
+lookups:
+  - ui_table: tblCompany
+    ui_column: realm_name
+    ref_table: realm
+    ref_key_field: realm_key
+    ref_label_field: realm_name
+    excel:
+      range_name: nr_RealmNames
+      sheet_name: _ref_realm
+      table_name: ref_realm
+
+  - ui_table: tblMapStructure
+    ui_column: building_name
+    ref_table: building
+    ref_key_field: building_key
+    ref_label_field: building_name
+    excel:
+      range_name: nr_BuildingNames
+      sheet_name: _ref_building
+      table_name: ref_building
+
+  - ui_table: tblProductionPlan
+    ui_column: product_name
+    ref_table: product
+    ref_key_field: product_key
+    ref_label_field: product_name
+    excel:
+      range_name: nr_ProductNames
+      sheet_name: _ref_product
+      table_name: ref_product
+
+  - ui_table: tblClearingPlan
+    ui_column: product_name
+    ref_table: product
+    ref_key_field: product_key
+    ref_label_field: product_name
+    excel:
+      range_name: nr_ProductNames
+      sheet_name: _ref_product
+      table_name: ref_product
+
+  - ui_table: tblClearingPlan
+    ui_column: channel_name
+    ref_table: channel
+    ref_key_field: channel_key
+    ref_label_field: channel_name
+    excel:
+      range_name: nr_ChannelNames
+      sheet_name: _ref_channel
+      table_name: ref_channel
+
+  - ui_table: tblOverrideExchangePrices
+    ui_column: realm_name
+    ref_table: realm
+    ref_key_field: realm_key
+    ref_label_field: realm_name
+    excel:
+      range_name: nr_RealmNames
+      sheet_name: _ref_realm
+      table_name: ref_realm
+
+  - ui_table: tblOverrideExchangePrices
+    ui_column: product_name
+    ref_table: product
+    ref_key_field: product_key
+    ref_label_field: product_name
+    excel:
+      range_name: nr_ProductNames
+      sheet_name: _ref_product
+      table_name: ref_product
+
+  - ui_table: tblOverrideRetailPrices
+    ui_column: realm_name
+    ref_table: realm
+    ref_key_field: realm_key
+    ref_label_field: realm_name
+    excel:
+      range_name: nr_RealmNames
+      sheet_name: _ref_realm
+      table_name: ref_realm
+
+  - ui_table: tblOverrideRetailPrices
+    ui_column: product_name
+    ref_table: product
+    ref_key_field: product_key
+    ref_label_field: product_name
+    excel:
+      range_name: nr_ProductNames
+      sheet_name: _ref_product
+      table_name: ref_product

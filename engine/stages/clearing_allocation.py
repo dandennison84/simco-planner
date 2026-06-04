@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 from collections import defaultdict
 
 from engine.debug import debug_log, debug_rows
@@ -10,32 +10,94 @@ def _k(x) -> str:
     return ("" if x is None else str(x)).strip()
 
 
-def _to_float(x, default: float = 0.0) -> float:
-    if x is None:
+def _require_float(
+    row: Dict[str, Any],
+    field: str,
+    *,
+    stage: str,
+    row_idx: int | None = None,
+    context: str = "",
+) -> float:
+    value = row.get(field, None)
+
+    if value is None or str(value).strip() == "":
+        raise ValueError(
+            f"[{stage}:error]\n"
+            f"  field={field}\n"
+            f"  row={row_idx}\n"
+            f"  value={value}\n"
+            f"  context={context}\n"
+            f"  reason=missing float value"
+        )
+
+    try:
+        return float(value)
+    except Exception:
+        raise ValueError(
+            f"[{stage}:error]\n"
+            f"  field={field}\n"
+            f"  row={row_idx}\n"
+            f"  value={value}\n"
+            f"  context={context}\n"
+            f"  reason=invalid float value"
+        )
+
+
+def _optional_float(
+    row: Dict[str, Any],
+    field: str,
+    default: float = 0.0,
+) -> float:
+    value = row.get(field, None)
+    if value is None:
         return default
-    s = str(x).strip()
+    s = str(value).strip()
     if s == "":
         return default
     return float(s)
 
 
-def _to_int(x, default: int = 0) -> int:
-    if x is None:
-        return default
-    s = str(x).strip()
-    if s == "":
-        return default
-    return int(s)
+def _require_int(
+    row: Dict[str, Any],
+    field: str,
+    *,
+    stage: str,
+    row_idx: int | None = None,
+    context: str = "",
+) -> int:
+    value = row.get(field, None)
+
+    if value is None or str(value).strip() == "":
+        raise ValueError(
+            f"[{stage}:error]\n"
+            f"  field={field}\n"
+            f"  row={row_idx}\n"
+            f"  value={value}\n"
+            f"  context={context}\n"
+            f"  reason=missing int value"
+        )
+
+    try:
+        return int(value)
+    except Exception:
+        raise ValueError(
+            f"[{stage}:error]\n"
+            f"  field={field}\n"
+            f"  row={row_idx}\n"
+            f"  value={value}\n"
+            f"  context={context}\n"
+            f"  reason=invalid int value"
+        )
 
 
-def _build_retail_capacity_map(state):
+def _build_retail_capacity_map(state: Dict[str, object]) -> Dict[Tuple[str, str, str], float]:
     company_rows = state.get("company", [])
     retail_rows = state.get("retail_prices", [])
 
     company_index = {
         _k(r.get("company_key")): (
             _k(r.get("realm_key")),
-            _to_float(r.get("sales_speed_delta"))
+            _optional_float(r, "sales_speed_delta", 0.0),
         )
         for r in company_rows
     }
@@ -44,12 +106,12 @@ def _build_retail_capacity_map(state):
         (
             _k(r.get("realm_key")),
             _k(r.get("product_key")),
-            _k(r.get("quality_level"))
-        ): _to_float(r.get("baseline_retail_units"))
+            _k(r.get("quality_level")),
+        ): _optional_float(r, "baseline_retail_units", 0.0)
         for r in retail_rows
     }
 
-    capacity_map = {}
+    capacity_map: Dict[Tuple[str, str, str], float] = {}
 
     for company_key, (realm_key, delta) in company_index.items():
         for (rk, pk, ql), base in retail_index.items():
@@ -60,37 +122,8 @@ def _build_retail_capacity_map(state):
 
 
 def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
-    """
-    Sequential waterfall allocation for surplus / shortage.
+    stage_name = "clearing_allocation"
 
-    Inputs:
-      - balance_plan
-      - clearing_plan
-      - channel
-      - company
-      - retail_prices
-
-    Outputs:
-      - clearing_result
-      - allocation_summary
-
-    Grain:
-      clearing_result:
-        (company_key, product_key, quality_level, priority, channel_key)
-
-    Rules:
-      - if net > 0: only channels with can_sink = TRUE may receive allocation
-      - if net < 0: only channels with can_source = TRUE may receive allocation
-      - rows processed in ascending unique priority
-      - each row must define exactly one of:
-            allocation_units_per_hour
-            allocation_frac
-      - allocation_frac is applied to REMAINING
-      - if channel uses retail capacity:
-            cap = baseline_retail_units * (1 + sales_speed_delta)
-      - only channels explicitly declared in clearing_plan may be used
-      - any unresolved imbalance is an error
-    """
     debug_log(state, "[clearing_allocation] start")
 
     balance_rows = state.get("balance_plan", [])
@@ -117,11 +150,18 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
     clearing_result: List[dict] = []
     allocation_summary: List[dict] = []
 
-    for bal in balance_rows:
+    for bal_idx, bal in enumerate(balance_rows, start=1):
         company_key = _k(bal.get("company_key"))
         product_key = _k(bal.get("product_key"))
         quality_level = _k(bal.get("quality_level"))
-        net = _to_float(bal.get("net_units_per_hour"))
+
+        net = _require_float(
+            bal,
+            "net_units_per_hour",
+            stage=stage_name,
+            row_idx=bal_idx,
+            context=f"company_key={company_key}, product_key={product_key}, quality_level={quality_level}",
+        )
 
         total_initial = abs(net)
         retail_alloc = 0.0
@@ -136,37 +176,71 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
         rules = clearing_by_product.get((company_key, product_key, quality_level), [])
         if not rules:
             raise ValueError(
-                f"No clearing rules for company={company_key}, product={product_key}, quality={quality_level}, remaining={remaining}"
+                f"[{stage_name}:error]\n"
+                f"  context=company_key={company_key}, product_key={product_key}, quality_level={quality_level}\n"
+                f"  reason=no clearing rules for non-zero balance\n"
+                f"  remaining={remaining}"
             )
 
-        # Only channels declared in clearing_plan may ever be used
         declared_channel_keys = {_k(r.get("channel_key")) for r in rules}
 
-        # validate unique priorities within product
-        priorities = [_to_int(r.get("priority")) for r in rules]
+        priorities = [
+            _require_int(
+                r,
+                "priority",
+                stage=stage_name,
+                context=f"company_key={company_key}, product_key={product_key}, quality_level={quality_level}",
+            )
+            for r in rules
+        ]
+
         if len(priorities) != len(set(priorities)):
             raise ValueError(
-                f"clearing_plan priority must be unique for company={company_key}, product={product_key}, quality={quality_level}"
+                f"[{stage_name}:error]\n"
+                f"  context=company_key={company_key}, product_key={product_key}, quality_level={quality_level}\n"
+                f"  reason=priority must be unique within clearing_plan"
             )
 
-        rules_sorted = sorted(rules, key=lambda r: _to_int(r.get("priority")))
+        rules_sorted = sorted(
+            rules,
+            key=lambda r: _require_int(
+                r,
+                "priority",
+                stage=stage_name,
+                context=f"company_key={company_key}, product_key={product_key}, quality_level={quality_level}",
+            ),
+        )
 
-        # track channel usage within this product for cap enforcement
         allocated_so_far: Dict[str, float] = {}
 
-        for r in rules_sorted:
-            priority = _to_int(r.get("priority"))
+        for rule_idx, r in enumerate(rules_sorted, start=1):
+            priority = _require_int(
+                r,
+                "priority",
+                stage=stage_name,
+                row_idx=rule_idx,
+                context=f"company_key={company_key}, product_key={product_key}, quality_level={quality_level}",
+            )
             channel_key = _k(r.get("channel_key"))
 
             if channel_key not in channel_index:
                 raise ValueError(
-                    f"clearing_plan references unknown channel_key={channel_key}"
+                    f"[{stage_name}:error]\n"
+                    f"  row={rule_idx}\n"
+                    f"  field=channel_key\n"
+                    f"  value={channel_key}\n"
+                    f"  context=company_key={company_key}, product_key={product_key}, quality_level={quality_level}, priority={priority}\n"
+                    f"  reason=unknown channel_key"
                 )
 
             if channel_key not in declared_channel_keys:
                 raise ValueError(
-                    f"Channel used outside clearing_plan "
-                    f"(company={company_key}, product={product_key}, quality={quality_level}, channel={channel_key})"
+                    f"[{stage_name}:error]\n"
+                    f"  row={rule_idx}\n"
+                    f"  field=channel_key\n"
+                    f"  value={channel_key}\n"
+                    f"  context=company_key={company_key}, product_key={product_key}, quality_level={quality_level}, priority={priority}\n"
+                    f"  reason=channel used outside clearing_plan"
                 )
 
             ch = channel_index[channel_key]
@@ -183,19 +257,39 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
             units = r.get("allocation_units_per_hour")
             frac = r.get("allocation_frac")
 
-            has_units = units is not None and str(units).strip() != ""
-            has_frac = frac is not None and str(frac).strip() != ""
+            units_val = str(units).strip() if units is not None else ""
+            frac_val  = str(frac).strip() if frac is not None else ""
+
+            units_num = float(units_val) if units_val != "" else 0.0
+            frac_num  = float(frac_val) if frac_val != "" else 0.0
+
+            has_units = units_val != "" and units_num > 0.0
+            has_frac  = frac_val != "" and frac_num > 0.0            
 
             if has_units == has_frac:
                 raise ValueError(
-                    f"clearing_plan row must define exactly one of allocation_units_per_hour or allocation_frac "
-                    f"(company={company_key}, product={product_key}, quality={quality_level}, priority={priority})"
+                    f"[{stage_name}:error]\n"
+                    f"  row={rule_idx}\n"
+                    f"  context=company_key={company_key}, product_key={product_key}, quality_level={quality_level}, priority={priority}\n"
+                    f"  reason=row must define exactly one of allocation_units_per_hour or allocation_frac"
                 )
 
             if has_units:
-                desired = _to_float(units)
+                desired = _require_float(
+                    r,
+                    "allocation_units_per_hour",
+                    stage=stage_name,
+                    row_idx=rule_idx,
+                    context=f"company_key={company_key}, product_key={product_key}, quality_level={quality_level}, priority={priority}",
+                )
             else:
-                desired = _to_float(frac) * remaining
+                desired = _require_float(
+                    r,
+                    "allocation_frac",
+                    stage=stage_name,
+                    row_idx=rule_idx,
+                    context=f"company_key={company_key}, product_key={product_key}, quality_level={quality_level}, priority={priority}",
+                ) * remaining
 
             if desired <= 0:
                 continue
@@ -237,7 +331,10 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
 
         if remaining > 1e-12:
             raise ValueError(
-                f"Incomplete clearing for company={company_key}, product={product_key}, quality={quality_level}, remaining={remaining}"
+                f"[{stage_name}:error]\n"
+                f"  context=company_key={company_key}, product_key={product_key}, quality_level={quality_level}\n"
+                f"  reason=incomplete clearing\n"
+                f"  remaining={remaining}"
             )
 
         capped = retail_alloc < total_initial and retail_alloc > 0
@@ -285,17 +382,31 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
         )
         alloc_sum[key] += r["allocated_units_per_hour"]
 
-    for r in balance_rows:
+    for bal_idx, r in enumerate(balance_rows, start=1):
         key = (
             _k(r["company_key"]),
             _k(r["product_key"]),
             _k(r["quality_level"]),
         )
 
-        expected = abs(_to_float(r["net_units_per_hour"]))
+        expected = abs(
+            _require_float(
+                r,
+                "net_units_per_hour",
+                stage=stage_name,
+                row_idx=bal_idx,
+                context=f"company_key={key[0]}, product_key={key[1]}, quality_level={key[2]}",
+            )
+        )
         actual = alloc_sum.get(key, 0.0)
 
         if abs(actual - expected) > 1e-6:
-            raise ValueError(f"Clearing invariant violated for {key}")
+            raise ValueError(
+                f"[{stage_name}:error]\n"
+                f"  context=company_key={key[0]}, product_key={key[1]}, quality_level={key[2]}\n"
+                f"  reason=clearing invariant violated\n"
+                f"  expected={expected}\n"
+                f"  actual={actual}"
+            )
 
     return out

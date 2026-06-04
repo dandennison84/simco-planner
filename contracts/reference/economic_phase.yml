@@ -1,0 +1,22 @@
+kind: table
+version: 1
+table: economic_phase
+surface: reference
+intent: Economic phases
+
+presence:
+  required: true
+  non_empty: true
+
+keys:
+  - economic_phase_key
+
+fields:
+  economic_phase_key:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  economic_phase_name:
+    type: string
+    required: true

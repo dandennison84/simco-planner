@@ -1,0 +1,21 @@
+kind: table
+version: 1
+table: system_parameters
+surface: reference
+intent: Defines engine configuration and debug controls
+
+presence:
+  required: true
+  non_empty: true
+
+keys:
+  - parameter_key
+
+fields:
+  parameter_key:
+    type: string
+    required: true
+
+  parameter_value:
+    type: string
+    required: true

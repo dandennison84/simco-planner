@@ -1,0 +1,29 @@
+kind: table
+version: 1
+table: building_bom
+surface: reference
+intent: Building BOM
+
+presence:
+  required: true
+  non_empty: true
+
+keys:
+  - building_key
+  - product_key
+
+fields:
+  building_key:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  product_key:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  baseline_quantity:
+    type: float
+    required: true
+    constraints: { min: 0 }

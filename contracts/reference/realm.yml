@@ -1,0 +1,22 @@
+kind: table
+version: 1
+table: realm
+surface: reference
+intent: Realms
+
+presence:
+  required: true
+  non_empty: true
+
+keys:
+  - realm_key
+
+fields:
+  realm_key:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  realm_name:
+    type: string
+    required: true

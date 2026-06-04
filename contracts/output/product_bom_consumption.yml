@@ -1,0 +1,31 @@
+kind: table
+version: 1
+table: product_bom_consumption
+surface: output
+intent: Input consumption derived from production
+
+presence:
+  required: true
+  non_empty: false
+
+keys:
+  - company_key
+  - product_key
+  - quality_level
+
+fields:
+  company_key:
+    type: int
+    required: true
+
+  product_key:
+    type: int
+    required: true
+
+  quality_level:
+    type: int
+    required: true
+
+  units_consumed_per_hour:
+    type: float
+    required: true

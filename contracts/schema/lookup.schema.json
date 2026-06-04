@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["kind", "version", "intent", "lookups"],
+  "additionalProperties": false,
+
+  "properties": {
+    "kind": {
+      "const": "lookup_mapping"
+    },
+    "version": {
+      "type": "integer"
+    },
+    "intent": {
+      "type": "string"
+    },
+
+    "lookups": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "ui_table",
+          "ui_column",
+          "ref_table",
+          "ref_key_field",
+          "ref_label_field",
+          "excel"
+        ],
+        "additionalProperties": false,
+
+        "properties": {
+          "ui_table": { "type": "string" },
+          "ui_column": { "type": "string" },
+
+          "ref_table": { "type": "string" },
+          "ref_key_field": { "type": "string" },
+          "ref_label_field": { "type": "string" },
+
+          "excel": {
+            "type": "object",
+            "required": ["range_name", "sheet_name", "table_name"],
+            "additionalProperties": false,
+            "properties": {
+              "range_name": { "type": "string" },
+              "sheet_name": { "type": "string" },
+              "table_name": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

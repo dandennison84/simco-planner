@@ -1,0 +1,22 @@
+kind: table
+version: 1
+table: seasons
+surface: reference
+intent: Seasons
+
+presence:
+  required: true
+  non_empty: true
+
+keys:
+  - season_key
+
+fields:
+  season_key:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  season_name:
+    type: string
+    required: true

@@ -1,0 +1,53 @@
+kind: table
+version: 1
+table: building
+surface: reference
+intent: Building definitions
+
+presence:
+  required: true
+  non_empty: true
+
+keys:
+  - building_key
+
+fields:
+  building_key:
+    type: int
+    required: true
+    unique: true
+    constraints: { min: 1 }
+
+  building_name:
+    type: string
+    required: true
+
+  building_category_key:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  baseline_wage:
+    type: float
+    required: true
+    constraints: { min: 0 }
+
+  baseline_build_time_hours:
+    type: float
+    required: false
+    constraints: { min: 0 }
+
+  baseline_robots:
+    type: int
+    required: false
+    constraints: { min: 0 }
+
+  max_level:
+    type: int
+    required: false
+    constraints: { min: 1 }
+
+  baseline_reference_value:
+    type: float
+    required: false
+    constraints: { min: 0 }

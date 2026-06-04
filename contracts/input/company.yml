@@ -1,0 +1,39 @@
+kind: table
+version: 1
+table: company
+surface: input
+intent: Defines scenario identity and global modifiers
+
+presence:
+  required: true
+  non_empty: true
+
+keys:
+  - company_key
+
+fields:
+  company_key:
+    type: int
+    required: true
+    unique: true
+    constraints: { min: 1 }
+
+  realm_key:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  company_level:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  production_speed_delta:
+    type: float
+    required: true
+    constraints: { min: 0 }
+
+  sales_speed_delta:
+    type: float
+    required: true
+    constraints: { min: 0 }

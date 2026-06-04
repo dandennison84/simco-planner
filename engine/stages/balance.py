@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Any
 
 from engine.debug import debug_log, debug_rows
 
@@ -9,34 +9,31 @@ def _k(x) -> str:
     return ("" if x is None else str(x)).strip()
 
 
-def _to_float(x, default: float = 0.0) -> float:
-    if x is None:
-        return default
-    s = str(x).strip()
-    if s == "":
-        return default
-    return float(s)
+def _require_float(row: Dict[str, Any], field: str, *, stage: str, row_idx: int | None = None) -> float:
+    value = row.get(field, None)
+
+    if value is None or str(value).strip() == "":
+        raise ValueError(
+            f"[{stage}:error]\n"
+            f"  field={field}\n"
+            f"  row={row_idx}\n"
+            f"  value={value}\n"
+            f"  reason=missing float value"
+        )
+
+    try:
+        return float(value)
+    except Exception:
+        raise ValueError(
+            f"[{stage}:error]\n"
+            f"  field={field}\n"
+            f"  row={row_idx}\n"
+            f"  value={value}\n"
+            f"  reason=invalid float value"
+        )
 
 
 def stage_balance(state: Dict[str, object]) -> Dict[str, object]:
-    """
-    Computes net balance from produced vs consumed quantities.
-
-    Inputs:
-      - production_intent
-      - product_bom_consumption
-
-    Outputs:
-      - balance_plan
-
-    Grain:
-      (company_key, product_key, quality_level)
-
-    Rules:
-      net = produced - consumed
-      surplus = max(net, 0)
-      shortage = max(-net, 0)
-    """
     debug_log(state, "[balance] start")
 
     production_rows = state.get("production_intent", [])
@@ -45,21 +42,33 @@ def stage_balance(state: Dict[str, object]) -> Dict[str, object]:
     produced_map: Dict[Tuple[str, str, str], float] = {}
     consumed_map: Dict[Tuple[str, str, str], float] = {}
 
-    for r in production_rows:
+    for i, r in enumerate(production_rows, start=1):
         key = (
             _k(r.get("company_key")),
             _k(r.get("product_key")),
             _k(r.get("quality_level")),
         )
-        produced_map[key] = produced_map.get(key, 0.0) + _to_float(r.get("units_produced_per_hour"))
 
-    for r in consumption_rows:
+        produced_map[key] = produced_map.get(key, 0.0) + _require_float(
+            r,
+            "units_produced_per_hour",
+            stage="balance",
+            row_idx=i,
+        )
+
+    for i, r in enumerate(consumption_rows, start=1):
         key = (
             _k(r.get("company_key")),
             _k(r.get("product_key")),
             _k(r.get("quality_level")),
         )
-        consumed_map[key] = consumed_map.get(key, 0.0) + _to_float(r.get("units_consumed_per_hour"))
+
+        consumed_map[key] = consumed_map.get(key, 0.0) + _require_float(
+            r,
+            "units_consumed_per_hour",
+            stage="balance",
+            row_idx=i,
+        )
 
     all_keys = sorted(set(produced_map.keys()) | set(consumed_map.keys()))
 
@@ -86,15 +95,12 @@ def stage_balance(state: Dict[str, object]) -> Dict[str, object]:
     out = dict(state, balance_plan=balance_plan)
     debug_rows(out, "balance", "balance_plan")
 
-    # ---------------------------------------------------------
-    # Invariant: net = produced - consumed
-    # ---------------------------------------------------------
     for r in balance_plan:
         produced = r["units_produced_per_hour"]
         consumed = r["units_consumed_per_hour"]
         net = r["net_units_per_hour"]
 
         if abs((produced - consumed) - net) > 1e-6:
-            raise ValueError("Balance invariant violated")
-        
+            raise ValueError("[balance:error]\n  reason=balance invariant violated")
+
     return out

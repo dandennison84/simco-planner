@@ -1,0 +1,47 @@
+kind: table
+version: 1
+table: balance_plan
+surface: output
+intent: Net balance and production/consumption breakdown
+
+presence:
+  required: true
+  non_empty: false
+
+keys:
+  - company_key
+  - product_key
+  - quality_level
+
+fields:
+  company_key:
+    type: int
+    required: true
+
+  product_key:
+    type: int
+    required: true
+
+  quality_level:
+    type: int
+    required: true
+
+  net_units_per_hour:
+    type: float
+    required: true
+
+  shortage_units_per_hour:
+    type: float
+    required: true
+
+  surplus_units_per_hour:
+    type: float
+    required: true
+
+  units_consumed_per_hour:
+    type: float
+    required: true
+
+  units_produced_per_hour:
+    type: float
+    required: true

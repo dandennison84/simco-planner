@@ -1,0 +1,35 @@
+kind: table
+version: 1
+table: building_category
+surface: reference
+intent: Building categories
+
+presence:
+  required: true
+  non_empty: true
+
+keys:
+  - building_category_key
+
+fields:
+  building_category_key:
+    type: int
+    required: true
+    constraints: { min: 1 }
+
+  building_category_name:
+    type: string
+    required: true
+
+  building_subcategory_name:
+    type: string
+    required: true
+
+  counts_towards_ao:
+    type: boolean
+    required: true
+
+  economic_role_key:
+    type: int
+    required: true
+    constraints: { min: 1 }

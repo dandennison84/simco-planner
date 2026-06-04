@@ -1,0 +1,31 @@
+kind: table
+version: 1
+table: production_intent
+surface: output
+intent: Production output computed at full capacity (continuous, pre-clearing)
+
+presence:
+  required: true
+  non_empty: false
+
+keys:
+  - company_key
+  - product_key
+  - quality_level
+
+fields:
+  company_key:
+    type: int
+    required: true
+
+  product_key:
+    type: int
+    required: true
+
+  quality_level:
+    type: int
+    required: true
+
+  units_produced_per_hour:
+    type: float
+    required: true
