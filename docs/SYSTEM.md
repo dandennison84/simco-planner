@@ -118,6 +118,30 @@ Rules:
 - CSV only
 - no implicit inputs
 
+#### Contract Model
+
+All data surfaces are defined through external contract files.
+
+Contracts define:
+- table presence
+- column structure
+- types
+- constraints
+- keys
+- validation behavior
+
+Contract files are:
+- authoritative
+- complete (no partial definitions)
+- independent of engine implementation
+
+The engine must not:
+- hardcode table structures
+- hardcode required tables
+- infer schema from data
+
+All contract interpretation occurs before pipeline execution.
+
 ---
 
 ### Tables
@@ -146,11 +170,16 @@ Outputs:
 
 run.py:
 
-load_contract_inputs()
-→ load_schema()
+load_contracts()
+→ discover_tables()
+→ load_contract_inputs()
 → validate_table()
 → run_pipeline()
 → write_contract_outputs()
+
+Contracts are:
+- dynamically discovered
+- used as the single source of truth for structure and validation
 
 ---
 
@@ -161,3 +190,4 @@ load_contract_inputs()
 - BOM is authoritative for consumption
 - all imbalance resolved via clearing
 - deterministic and testable
+- contract-driven structure (no hardcoded tables or validation rules)

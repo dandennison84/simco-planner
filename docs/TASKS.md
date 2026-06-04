@@ -22,6 +22,30 @@ Rules:
 
 | ID | Task | Layer | Notes |
 |----|------|------|------|
+| ID | Task | Layer | Notes |
+|----|------|------|------|
+| T-030 | Rename `/schema` directory to `/contracts` | repo | Update all Python references (`run.py`, `build_template.py`) to new path |
+| T-031 | Rename `schema/input.yml` → `contracts/input_tables.yml` | contracts | Update `_schema_paths()` in `run.py` |
+| T-032 | Rename `schema/reference.yml` → `contracts/reference_tables.yml` | contracts | Update `_schema_paths()` in `run.py` |
+| T-033 | Rename `schema/output.yml` → `contracts/output_tables.yml` | contracts | Update `_schema_paths()` in `run.py` |
+| T-034 | Rename `schema/ui.yml` → `contracts/ui_lookups.yml` | contracts | Update `build_template.py` UI config path |
+| T-035 | Rename `schema/internal.yml` → `contracts/internal_tables.yml` | contracts | No runtime use yet |
+| T-036 | Replace all `type: logical` with `type: boolean` in all contract files | contracts | Align with standard type vocabulary |
+| T-037 | Add `kind: table` to all table definitions in input/reference/output contract files | contracts | Top-level per table |
+| T-038 | Add `kind: lookup_mapping` to UI contract file (`ui_lookups.yml`) | contracts | Separate behavior vs schema intent |
+| T-039 | Add `presence.required` and `presence.non_empty` metadata to required input tables (company, map_structure, production_plan) | contracts | Replace hardcoded logic in run.py |
+| T-040 | Add `presence.non_empty` metadata to required output tables (production_intent) | contracts | Replace `_validate_output_non_empty()` |
+| T-041 | Remove hardcoded required input table list from `_validate_required_inputs_non_empty()` in `run.py` | engine | Replace with schema-driven presence checks |
+| T-042 | Remove hardcoded output non-empty check from `_validate_output_non_empty()` in `run.py` | engine | Replace with schema-driven presence metadata |
+| T-043 | Refactor `_schema_paths()` in `run.py` to read from `/contracts/` directory instead of `/schema/` | engine | Maintain current 3-file grouping |
+| T-044 | Introduce contract loader that reads all files in `/contracts/` directory instead of fixed filenames | engine | Prepare for future folder split |
+| T-045 | Move lookup definitions from `LOOKUPS` constant in `build_template.py` into `ui_lookups.yml` | tooling | Eliminate duplicated config |
+| T-046 | Replace `LOOKUP_TO_RANGE` mapping in `build_template.py` with schema-driven mapping from `ui_lookups.yml` | tooling | Ensure Excel validation is config-driven |
+| T-047 | Update `build_template.py` to fully derive lookup sheets, tables, and ranges from `ui_lookups.yml` | tooling | Remove hardcoded lookup behavior |
+| T-048 | Add validation to ensure all `keys` fields exist in `fields` and are marked `required: true` | validation | Schema sanity check layer |
+| T-049 | Add validation to reject unknown field types during schema load (before row validation) | validation | Prevent silent schema errors |
+| T-050 | Add meta-validation: ensure `constraints` only applied to numeric fields | validation | Avoid invalid schema usage |
+| T-051 | Standardize contract parsing to require `fields` to be a mapping and `keys` to be a list (fail fast) | validation | Already partially implemented, formalize behavior |
 | T-005 | Functional coding audit | All | ARCHITECTURE, DECISIONS |
 | T-004 | Add core unit tests | tooling | In Progress | TOOLING.md |
 

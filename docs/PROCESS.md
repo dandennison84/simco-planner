@@ -11,11 +11,12 @@ Define how work moves from idea → implementation → validation.
 1. Define problem
 2. Add or update decision (DECISIONS.md)
 3. Define or update architecture if needed
-4. Add task (TASKS.md)
-5. Implement change
-6. Add tests (where applicable)
-7. Commit using structured message
-8. Validate output
+4. Update or create contract definitions (if structural change)
+5. Add task (TASKS.md)
+6. Implement change
+7. Add tests (where applicable)
+8. Commit using structured message
+9. Validate output
 
 ---
 
@@ -25,6 +26,9 @@ Define how work moves from idea → implementation → validation.
 - No task without clear scope
 - No logic without testability
 - No changes without commit traceability
+- No structure defined in engine code
+- No validation rules hardcoded if definable in contracts
+- No contract duplication across YAML and Python
 
 ---
 
@@ -54,6 +58,25 @@ Define how work moves from idea → implementation → validation.
 
 ---
 
+## Contract Change Rules
+
+Add or modify contracts when:
+
+- adding a new table
+- changing field structure
+- changing validation rules
+- introducing required/non-empty semantics
+- adding UI lookup behavior
+
+Do not change engine code for:
+
+- new tables of existing type
+- adding columns within existing contract definitions
+
+Engine code changes must follow contract definition, not precede it.
+
+---
+
 ## Layer Discipline
 
 Before any work:
@@ -64,13 +87,43 @@ Before any work:
 
 ---
 
+## Contract Discipline
+
+All structural changes must be contract-first.
+
+Rules:
+
+- No new tables without a contract definition
+- No schema changes embedded in Python
+- All structure must be defined in `/contracts`
+- Contract updates must precede engine changes
+- Contract metadata must define:
+  - table presence
+  - required/non-empty semantics
+  - field structure and typing
+
+Workflow:
+
+1. Modify contract
+2. Validate schema correctness
+3. Update engine only if behavior is required
+
+Goal:
+
+- Contracts define structure
+- Engine executes against contracts
+
+---
+
 ## Validation
 
 All changes must be validated by:
 
+- validating contract correctness
 - inspecting outputs
 - ensuring invariants hold
 - confirming no unintended grain changes
+- ensuring no contract/engine drift
 
 ---
 
@@ -80,5 +133,6 @@ Process enforces:
 - discipline
 - traceability
 - correctness
+- contract-first architecture
 
 Work must flow through defined steps.

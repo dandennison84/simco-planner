@@ -12,8 +12,12 @@ This document describes:
 - table grain
 - invariants
 
-The schema (`schema/*.yml`) is the authoritative definition of structure and types.  
+The contract definitions (`contracts/*.yml`) are the authoritative definition of structure, typing, and validation behavior. 
 This document defines meaning, grain, and invariants.
+
+For contract structure, typing, and validation rules, see `CONTRACT_SPEC.md`.
+
+This document defines meaning, grain, and invariants only.
 
 ---
 
@@ -34,9 +38,58 @@ Rules:
 
 ---
 
+## Contract Model
+
+All table surfaces are defined through external contract files.
+
+Contracts define:
+- table presence
+- column structure
+- data types
+- constraints
+- identity keys
+- validation behavior
+
+Rules:
+
+- Contracts are the single source of truth for all table structure
+- The engine must not hardcode table definitions or validation rules
+- All tables must be explicitly defined in contracts before use
+- Contract files must be complete (no partial schema definitions)
+- Engine logic must not infer structure from CSV data
+- Contract files must explicitly declare their type using `kind`
+
+Contract types:
+
+- `kind: table` → defines CSV table structure
+- `kind: lookup_mapping` → defines UI lookup behavior
+
+---
+
+## Contract Discovery
+
+The engine must dynamically discover contract definitions.
+
+Rules:
+
+- Contract files must be read from the contracts directory
+- Engine must not rely on fixed filenames
+- Adding a new contract must not require code changes
+- All contract files within a category must be loaded and merged
+
+Categories:
+
+- contracts/input
+- contracts/reference
+- contracts/output
+- contracts/ui
+- contracts/internal
+
+---
+
 # INPUT TABLES
 
-Defined in: schema/input.yml
+Defined in: contracts/input_tables.yml
 
 User-controlled surfaces.
 
@@ -52,7 +105,7 @@ Tables:
 
 # REFERENCE TABLES
 
-Defined in: schema/reference.yml
+Defined in: contracts/reference_tables.yml
 
 System-controlled domain surfaces.
 
@@ -74,9 +127,25 @@ Tables:
 
 ---
 
+# UI CONTRACTS
+
+Defined in: contracts/ui_lookups.yml
+
+UI contracts define lookup and validation behavior for Excel surfaces.
+
+Rules:
+
+- UI behavior must be fully contract-driven
+- Lookup mappings must not be duplicated in code
+- UI contracts do not define engine data structure
+- UI contracts must reference reference tables for lookup sources
+- UI logic must not modify or reinterpret engine data
+
+---
+
 # ENGINE OUTPUT TABLES
 
-Defined in: schema/output.yml
+Defined in: contracts/output_tables.yml
 
 These are resolved, deterministic fact tables.  
 They are NOT diagnostics or guidance.
@@ -227,6 +296,14 @@ Determinism:
 - Same inputs → same outputs
 - No implicit behavior
 
+Contract Enforcement:
+- All tables must conform exactly to contract definitions
+- Extra or missing columns must fail validation
+- All required fields must be present and valid
+- All key and uniqueness constraints must be enforced
+- Required/non-empty table semantics must be defined in contracts
+- Engine must perform no structural inference or correction
+
 ---
 
 # SUMMARY
@@ -244,4 +321,6 @@ INPUT
 
 Outputs represent the complete resolved system state.
 
-All diagnostics and guidance must be built on top of these tables.
+All diagnostics and guidance must be built on top of these tables.All diagnostics and guidance must be built on top of these tables engine executes strictly against these contracts.
+
+Contracts define all data structure and validation behavior.  

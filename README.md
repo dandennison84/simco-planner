@@ -2,6 +2,7 @@
 
 A deterministic, table-based engine for analyzing and planning Sim Companies businesses.
 
+This system is contract-driven. See `/docs/CONTRACT_SPEC.md` for the structural foundation.
 ---
 
 ## Overview
@@ -25,7 +26,7 @@ It produces:
 ## Where to go next
 
 If you are new:
-→ Start with system structure: /docs/ARCHITECTURE.md
+→ Start with system structure: /docs/SYSTEM.md
 
 If you want to understand behavior:
 → See requirements and domain rules: /docs/REQUIREMENTS.md
@@ -34,7 +35,61 @@ If you are making changes:
 → Follow development process: /docs/PROCESS.md
 
 If you need implementation details:
-→ See data contracts and schema: /docs/DATA_CONTRACTS.md
+→ See data contracts: /docs/DATA_CONTRACTS.md  
+→ See contract structure: /docs/CONTRACT_SPEC.md
+
+---
+
+## Documentation Index
+
+The system is defined through a set of focused documents. Each has a distinct role and avoids overlap.
+
+### Core System
+
+- `/docs/SYSTEM.md`  
+  → Defines system architecture, data flow, and pipeline structure
+
+- `/docs/DATA_CONTRACTS.md`  
+  → Defines table meaning, grain, and invariants
+
+- `/docs/CONTRACT_SPEC.md`  
+  → Defines contract structure, typing, and validation rules
+
+---
+
+### Behavior & Rules
+
+- `/docs/REQUIREMENTS.md`  
+  → Defines all functional requirements and domain rules
+
+- `/docs/RULES.md`  
+  → Defines strict invariants (signals, evidence, contract enforcement)
+
+---
+
+### Governance & Evolution
+
+- `/docs/DECISIONS.md`  
+  → Records architectural decisions and evolution over time
+
+- `/docs/ROADMAP.md`  
+  → Tracks planned future capabilities and system direction
+
+---
+
+### Development
+
+- `/docs/PROCESS.md`  
+  → Defines how work is performed (task → implementation → validation)
+
+- `/docs/GIT_WORKFLOW.md`  
+  → Defines version control and commit conventions
+
+- `/docs/NAMING_CONVENTIONS.md`  
+  → Defines naming standards for tables, fields, and code
+
+- `/docs/TOOLING.md`  
+  → Defines development tools and environment setup
 
 ---
 
@@ -42,29 +97,27 @@ If you need implementation details:
 
 The engine operates as a layered transformation system:
 
-USER INPUT
-(company_snapshot, structure_map, assignment)
+USER INPUT (CSV CONTRACTS)
+(company, map_structure, production_plan, clearing_plan, overrides)
         ↓
-VALIDATION
-(schema + invariants)
+CONTRACT VALIDATION
+(schema + typing + required tables + key constraints)
         ↓
-STRUCTURE
-(building capacity & topology)
+PRODUCTION (FULL CAPACITY)
+(units_produced_per_hour)
         ↓
-ALLOCATION
-(slot → product × quality split)
+BOM CONSUMPTION
+(recursive input demand across all levels)
         ↓
-THROUGHPUT
-(quantity resolution + constraints)
+BALANCE
+(net = produced - consumed)
         ↓
-ECONOMICS
-(value applied to flow)
+CLEARING
+(resolve all surplus and shortage via channels)
         ↓
-DIAGNOSTICS
-(facts → signals → guidance)
-        ↓
-OUTPUT (ENGINE LAYER)
-(production_intent, product_bom_consumption, balance_plan, clearing_result, clearing_remainder, allocation_summary)
+ENGINE OUTPUT (FACT TABLES)
+(production_intent, product_bom_consumption, balance_plan, clearing_result, allocation_summary)
+
 ---
 
 ## Core Idea
@@ -82,6 +135,8 @@ All behavior is:
 - explicit
 - testable
 - traceable
+
+All structure and validation are defined through explicit contracts.
 
 ---
 
@@ -157,6 +212,8 @@ Each stage:
 - consumes tables
 - produces tables
 - enforces strict contracts
+
+All tables and validation rules are defined externally via contracts.
 
 → System structure, pipeline, and layers: /docs/ARCHITECTURE.md
 

@@ -39,6 +39,13 @@ They are:
 | 4 | ✅ |  |  | Signals | Suppression must operate at full signal grain | Prevents cross-context suppression errors | Signal engine logic | No partial matching |
 | 5 | ✅ |  |  | Signals | Signals must not implicitly aggregate or deduplicate rows | Preserves event-level correctness | Query design discipline | Explicit collapse only |
 | 6 | ✅ |  |  | Evidence | Evidence represents row-level causality and must not be interpreted as entity counts | Prevents misinterpretation of diagnostics | Diagnostics layer discipline | Distinguish row vs entity counts |
+| 7 | ✅ |  |  | Contracts | Engine must not define or infer table structure | Prevents drift between contracts and runtime behavior | Contract-first architecture enforcement | All structure comes from contracts |
+| 8 | ✅ |  |  | Contracts | Engine must not hardcode table presence or requiredness | Enables adding new tables without code changes | Contract metadata enforcement | Replaces hardcoded checks in run.py |
+| 9 | ✅ |  |  | Contracts | All table validation behavior must be derived from contracts | Prevents duplication of validation logic | Schema-driven validation layer | Includes required/non-empty semantics |
+| 10 | ✅ |  |  | Contracts | Contract definitions must be complete and self-sufficient | Partial schema definitions create ambiguity and require defensive logic | Contract validation discipline | Fields, types, constraints, keys all required |
+| 11 | ✅ |  |  | Contracts | Contract files must be explicitly typed | Prevents ambiguous parsing and interpretation | Contract parser enforcement | Uses `kind: table`, `kind: lookup_mapping` |
+| 12 | ✅ |  |  | Contracts | Engine must dynamically discover contract definitions | Prevents static schema loading and enables extensibility | Contract discovery logic | No reliance on fixed filenames |
+| 13 | ✅ |  |  | Tooling | UI behavior must be fully derived from contract definitions | Prevents duplication between YAML and code | Template builder design | Eliminates hardcoded LOOKUPS |
 
 ---
 
@@ -47,6 +54,7 @@ They are:
 - These rules are **never optional**
 - These rules are **not decisions** — they are invariants
 - These rules apply wherever Signals, Facts, or Evidence exist
+- Contract enforcement must be systemic and cannot rely on implementation discipline alone
 - These rules must be enforced by:
   - schema design  
   - pipeline structure  
@@ -79,38 +87,6 @@ They are enforced during validation before pipeline execution.
 - Overrides must apply only to explicitly specified fields
 - All unspecified fields must retain their baseline values
 - Overrides must resolve to a valid state after application
-
-### Flow Policy (vi_flow_policy)
-
-- Flow policy must not modify structure or assignment data
-- Flow policy must only affect resource routing and sourcing
-- Flow policy must operate on resolved production outputs
-
----
-
-### Sales Strategy (`sales_strategy`)
-
-The following invariants must hold for all rows:
-
-- Exactly one of the following must be provided:
-  - `allocation_frac`
-  - `allocation_units_per_hour`
-
-- Both fields must not be populated simultaneously
-
-- `allocation_frac` must be within [0, 1]
-
-- `allocation_units_per_hour` must be non-negative
-
----
-
-### Channel Constraints
-
-- If `sales_channel_key` represents Contract:
-  - `contract_discount_frac` must be provided
-
-- If `sales_channel_key` represents non-Contract:
-  - `contract_discount_frac` must be null or zero
 
 ---
 
@@ -146,3 +122,35 @@ All consumption must be:
 - global
 
 All imbalance must be resolved via clearing only.
+
+---
+
+## Contract Invariants
+
+The following invariants govern contract-driven behavior:
+
+### Structure Ownership
+- All table structure must be defined in contract files
+- Engine must not infer structure from data
+- Engine must not define schema internally
+
+### Validation Ownership
+- All structural validation rules must originate from contracts
+- Engine must not duplicate validation logic present in contracts
+- Required/non-empty semantics must be defined in contract metadata
+
+### Discovery
+- All contract definitions must be dynamically discovered
+- Engine must not depend on fixed schema filenames
+- Adding new contract files must not require engine changes
+
+### Completeness
+- Contract definitions must be complete
+- All fields must have explicit types
+- All keys must reference valid fields
+- No partial or implicit schema definitions allowed
+
+### Separation of Concerns
+- Contracts define structure and validation
+- Engine executes transformations only
+- Tooling (UI) derives behavior from contracts, not code
