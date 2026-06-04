@@ -13,6 +13,16 @@ lookups:
       sheet_name: _ref_realm
       table_name: ref_realm
 
+  - ui_table: tblCompany
+    ui_column: economic_phase_name
+    ref_table: economic_phase
+    ref_key_field: economic_phase_key
+    ref_label_field: economic_phase_name
+    excel:
+      range_name: nr_EconomicPhaseNames
+      sheet_name: _ref_economic_phase
+      table_name: ref_economic_phase
+      
   - ui_table: tblMapStructure
     ui_column: building_name
     ref_table: building

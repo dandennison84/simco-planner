@@ -175,10 +175,36 @@ def write_contract_outputs(
 ) -> None:
     output_contracts = tables_for_surface(registry, "output")
 
+    if not output_contracts:
+        raise ValueError(
+            "[io:error]\n"
+            "  reason=no output contracts defined\n"
+            "  path=contracts/output\n"
+            "  action=add output table contracts before running pipeline"
+        )
+
     for table_name, contract in output_contracts.items():
-        rows = outputs.output_tables.get(table_name, [])
+        rows = outputs.output_tables.get(table_name)
+
+        if rows is None:
+            raise ValueError(
+                f"[io:error]\n"
+                f"  table={table_name}\n"
+                f"  reason=output not produced by pipeline\n"
+                f"  available_tables={list(outputs.output_tables.keys())}"
+            )
 
         columns = list(contract.fields.keys())
+
+        if not columns:
+            raise ValueError(
+                f"[io:error]\n"
+                f"  table={table_name}\n"
+                f"  reason=no columns defined in contract\n"
+                f"  action=add fields to contract"
+            )
+
+        output_dir.mkdir(parents=True, exist_ok=True)
 
         _write_csv_rows(
             output_dir / f"{table_name}.csv",

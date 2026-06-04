@@ -70,7 +70,15 @@ def stage_production_resolution(state: Dict[str, object]) -> Dict[str, object]:
     plan_rows = state.get("production_plan", [])
     product_rows = state.get("product", [])
     company_rows = state.get("company", [])
+    building_rows = state.get("building", [])    
 
+    building_phase_multiplier = {
+        _k(r["building_key"]): {
+            "recession": float(r.get("recession_output_multiplier", 1.0)),
+            "boom": float(r.get("boom_output_multiplier", 1.0)),
+        }
+        for r in building_rows
+    }
     # ---------------------------------------------------------
     # Build lookup indexes
     # ---------------------------------------------------------
@@ -91,6 +99,11 @@ def stage_production_resolution(state: Dict[str, object]) -> Dict[str, object]:
             stage=stage_name,
             context=f"company_key={_k(r.get('company_key'))}",
         )
+        for r in company_rows    
+    }
+
+    company_phase = {
+        _k(r["company_key"]): _k(r["economic_phase_key"])
         for r in company_rows
     }
 
@@ -203,8 +216,45 @@ def stage_production_resolution(state: Dict[str, object]) -> Dict[str, object]:
             context=f"product_key={pk}",
         )
 
-        prod_speed = 1.0 + company_index.get(ck, 0.0)
-        units = building_level * baseline_output * prod_speed * frac
+        bk = _k(slot.get("building_key"))
+        phase = company_phase.get(ck, "1")
+
+        if bk not in building_phase_multiplier:
+            raise ValueError(
+                f"[{stage_name}:error]\n"
+                f"  row={i}\n"
+                f"  field=building_key\n"
+                f"  value={bk}\n"
+                f"  reason=no building phase multiplier found"
+            )
+
+        bm = building_phase_multiplier[bk]
+
+        if phase == "1":
+            phase_multiplier = 1.0
+        elif phase == "2":
+            phase_multiplier = bm["recession"]
+        elif phase == "3":
+            phase_multiplier = bm["boom"]
+        else:
+            raise ValueError(
+                f"[{stage_name}:error]\n"
+                f"  row={i}\n"
+                f"  field=economic_phase_key\n"
+                f"  value={phase}\n"
+                f"  reason=unknown phase"
+            )
+        
+        mod = company_index.get(ck, 0.0)
+        prod_speed = 1.0 / (1.0 - mod)
+
+        units = (
+            building_level
+            * baseline_output
+            * phase_multiplier
+            * prod_speed
+            * frac
+        )
 
         key = (ck, pk, ql)
         produced[key] = produced.get(key, 0.0) + units

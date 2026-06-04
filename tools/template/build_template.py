@@ -119,23 +119,65 @@ def create_name_dropdown_range(
 
 
 def apply_validation(ws, table_name: str, column_name: str, range_name: str) -> None:
-    lo = ws.ListObjects(table_name)
-    target = lo.ListColumns(column_name).DataBodyRange
+    try:
+        lo = ws.ListObjects(table_name)
+    except Exception as e:
+        available_tables = [t.Name for t in ws.ListObjects]
+        raise RuntimeError(
+            f"[template:error]\n"
+            f"  worksheet={ws.Name}\n"
+            f"  table={table_name}\n"
+            f"  reason=table not found\n"
+            f"  available_tables={available_tables}"
+        ) from e
+
+    available_columns = [lo.ListColumns(i).Name for i in range(1, lo.ListColumns.Count + 1)]
+
+    try:
+        target_column = lo.ListColumns(column_name)
+    except Exception as e:
+        raise RuntimeError(
+            f"[template:error]\n"
+            f"  worksheet={ws.Name}\n"
+            f"  table={table_name}\n"
+            f"  column={column_name}\n"
+            f"  range={range_name}\n"
+            f"  reason=column not found in table\n"
+            f"  available_columns={available_columns}"
+        ) from e
+
+    target = target_column.DataBodyRange
     if target is None:
-        return
+        raise RuntimeError(
+            f"[template:error]\n"
+            f"  worksheet={ws.Name}\n"
+            f"  table={table_name}\n"
+            f"  column={column_name}\n"
+            f"  range={range_name}\n"
+            f"  reason=table has no data body range"
+        )
 
     try:
         target.Validation.Delete()
     except Exception:
         pass
 
-    target.Validation.Add(
-        Type=3,
-        AlertStyle=1,
-        Operator=1,
-        Formula1=f"={range_name}",
-    )
-
+    try:
+        target.Validation.Add(
+            Type=3,
+            AlertStyle=1,
+            Operator=1,
+            Formula1=f"={range_name}",
+        )
+    except Exception as e:
+        raise RuntimeError(
+            f"[template:error]\n"
+            f"  worksheet={ws.Name}\n"
+            f"  table={table_name}\n"
+            f"  column={column_name}\n"
+            f"  range={range_name}\n"
+            f"  reason=failed to add validation"
+        ) from e
 
 def _rules_by_ref_table(rules: Tuple[LookupRule, ...]) -> Dict[str, List[LookupRule]]:
     out: Dict[str, List[LookupRule]] = {}
@@ -291,22 +333,13 @@ def main():
                     level=2,
                 )
 
-            try:
-                apply_validation(
-                    ws,
-                    table_name=rule.ui_table,
-                    column_name=rule.ui_column,
-                    range_name=rule.excel["range_name"],
-                )
-            except Exception as e:
-                raise RuntimeError(
-                    f"[template:error]\n"
-                    f"  table={rule.ui_table}\n"
-                    f"  column={rule.ui_column}\n"
-                    f"  range={rule.excel['range_name']}\n"
-                    f"  reason=validation failed (likely table/column mismatch)"
-                ) from e
-            
+            apply_validation(
+                ws,
+                table_name=rule.ui_table,
+                column_name=rule.ui_column,
+                range_name=rule.excel["range_name"],
+            )
+
         wb.Save()
         wb.Close(SaveChanges=True)
 

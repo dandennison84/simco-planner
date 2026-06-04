@@ -188,13 +188,6 @@ def main(env: str | None = None) -> int:
     if debug_enabled(state, 1):
         debug_log(state, "[run] running pipeline", level=1)
 
-    pipeline_outputs = run_pipeline(
-        ContractInputs(
-            input_tables=validated_inputs,
-            reference_tables=validated_refs,
-        )
-    )
-    
     outputs = run_pipeline(
         ContractInputs(
             input_tables=validated_inputs,
@@ -206,7 +199,7 @@ def main(env: str | None = None) -> int:
         debug_log(
             state,
             f"[run] pipeline outputs\n"
-            f"  tables={list(pipeline_outputs.output_tables.keys())}",
+            f"  tables={list(outputs.output_tables.keys())}",
             level=2,
         )
 

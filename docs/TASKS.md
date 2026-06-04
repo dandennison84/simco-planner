@@ -15,6 +15,22 @@ Rules:
 
 | ID | Task | Layer | Status | Notes |
 |----|------|------|--------|------|
+| ID | Task | Layer | Notes |
+|----|------|------|------|
+| T-058 | Replace linear production speed with inverse scaling | engine | Update `prod_speed` in production_resolution to `1 / (1 - mod)` |
+| T-059 | Add `economic_phase_key` to company schema | contracts | Add column and mark as `required: true` |
+| T-060 | Load company → economic_phase mapping | engine | Build `company_key → economic_phase_key` lookup |
+| T-061 | Load building phase multipliers | engine | Build `building_key → recession/boom multipliers` map |
+| T-062 | Apply phase multiplier to production | engine | Multiply production by building-level phase multiplier |
+| T-063 | Normalize Normal phase behavior | engine | Ensure phase key = 1 → multiplier = `1.0` |
+| T-064 | Replace linear sales speed with inverse scaling | engine | Update retail capacity to use `1 / (1 - sales_speed_delta)` |
+| T-065 | Apply phase multiplier to retail throughput | engine | Multiply retail capacity by phase multiplier |
+| T-066 | Validate company phase key integrity | validation | Ensure all `economic_phase_key` values exist in reference table |
+| T-067 | Validate production vs game (BL=1 test) | validation | Power BL=1 at 4% → 2673.90 expected |
+| T-068 | Validate production aggregation behavior | validation | Ensure BL scaling remains consistent post-change |
+| T-069 | Validate recession vs boom production | validation | Recession increases output, boom decreases output |
+| T-070 | Validate retail behavior under phase | validation | Retail allocation should shift with phase multiplier |
+| T-071 | Ensure phase multiplier applied once | engine | Prevent duplicate application across stages |
 
 ---
 

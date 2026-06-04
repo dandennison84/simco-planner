@@ -51,3 +51,13 @@ fields:
     type: float
     required: false
     constraints: { min: 0 }
+
+  recession_output_multiplier:
+    type: float
+    required: true
+    constraints: { min: 0 }
+
+  boom_output_multiplier:
+    type: float
+    required: true
+    constraints: { min: 0 }

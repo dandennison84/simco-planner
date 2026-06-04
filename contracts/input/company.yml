@@ -23,6 +23,11 @@ fields:
     required: true
     constraints: { min: 1 }
 
+  economic_phase_key:
+    type: int
+    required: true
+    constraints: { min: 1 }    
+
   company_level:
     type: int
     required: true
