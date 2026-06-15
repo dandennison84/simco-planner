@@ -1,0 +1,28 @@
+kind: table
+version: 1
+
+table: retail_phase_multiplier
+surface: reference
+
+intent: product-level retail demand shift by economic phase
+
+presence:
+  required: true
+  non_empty: true
+
+keys:
+  - product_key
+  - economic_phase_key
+
+fields:
+  product_key:
+    type: int
+    required: true
+
+  economic_phase_key:
+    type: int
+    required: true
+
+  phase_multiplier:
+    type: float
+    required: true

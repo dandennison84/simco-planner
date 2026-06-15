@@ -93,12 +93,14 @@ def _require_int(
 def _build_retail_capacity_map(state: Dict[str, object]) -> Dict[Tuple[str, str, str], float]:
     company_rows = state.get("company", [])
     retail_rows = state.get("retail_prices", [])
+    phase_rows = state.get("retail_phase_multiplier", [])
 
     company_index = {
-        _k(r.get("company_key")): (
-            _k(r.get("realm_key")),
-            _optional_float(r, "sales_speed_delta", 0.0),
-        )
+        _k(r.get("company_key")): {
+            "realm_key": _k(r.get("realm_key")),
+            "sales_speed_delta": _optional_float(r, "sales_speed_delta", 0.0),
+            "economic_phase_key": _k(r.get("economic_phase_key")),
+        }
         for r in company_rows
     }
 
@@ -111,12 +113,66 @@ def _build_retail_capacity_map(state: Dict[str, object]) -> Dict[Tuple[str, str,
         for r in retail_rows
     }
 
+    phase_index = {
+        (
+            _k(r.get("product_key")),
+            _k(r.get("economic_phase_key")),
+        ): _optional_float(r, "phase_multiplier", 1.0)
+        for r in phase_rows
+    }
+
     capacity_map: Dict[Tuple[str, str, str], float] = {}
 
-    for company_key, (realm_key, delta) in company_index.items():
-        for (rk, pk, ql), base in retail_index.items():
-            if rk == realm_key:
-                capacity_map[(company_key, pk, ql)] = base * (1.0 + delta)
+    active_keys = {
+        (_k(r.get("company_key")), _k(r.get("product_key")), _k(r.get("quality_level")))
+        for r in state.get("balance_plan", [])
+    }    
+
+    for company_key, company in company_index.items():
+        realm_key = company["realm_key"]
+        sales_speed_delta = company["sales_speed_delta"]
+        economic_phase_key = company["economic_phase_key"]
+
+        if sales_speed_delta >= 1.0:
+            raise ValueError(
+                f"[clearing_allocation:error]\n"
+                f"  field=sales_speed_delta\n"
+                f"  company_key={company_key}\n"
+                f"  value={sales_speed_delta}\n"
+                f"  reason=sales_speed_delta must be < 1.0"
+            )
+
+        sales_factor = 1.0 / (1.0 - sales_speed_delta)
+
+        for (rk, product_key, quality_level), base_retail_units in retail_index.items():
+            if rk != realm_key:
+                continue
+
+            if (company_key, product_key, quality_level) not in active_keys:
+                continue
+
+            if economic_phase_key == "1":
+                phase_factor = 1.0
+            else:
+                phase_key = (product_key, economic_phase_key)
+
+                if phase_key not in phase_index:
+                    raise ValueError(
+                        f"[clearing_allocation:error]\n"
+                        f"  field=phase_multiplier\n"
+                        f"  company_key={company_key}\n"
+                        f"  product_key={product_key}\n"
+                        f"  economic_phase_key={economic_phase_key}\n"
+                        f"  reason=missing retail_phase_multiplier entry"
+                    )
+
+                phase_factor = phase_index[phase_key]
+
+            capacity_map[(company_key, product_key, quality_level)] = (
+                base_retail_units
+                * sales_factor
+                * phase_factor
+            )
 
     return capacity_map
 

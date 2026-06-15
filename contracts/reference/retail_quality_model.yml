@@ -1,0 +1,28 @@
+kind: table
+version: 1
+
+table: retail_quality_model
+surface: reference
+
+intent: quality slope per product and retail building
+
+presence:
+  required: true
+  non_empty: true
+
+keys:
+  - product_key
+  - building_key
+
+fields:
+  product_key:
+    type: int
+    required: true
+
+  building_key:
+    type: int
+    required: true
+
+  ql_slope:
+    type: float
+    required: true

@@ -15,22 +15,12 @@ Rules:
 
 | ID | Task | Layer | Status | Notes |
 |----|------|------|--------|------|
-| ID | Task | Layer | Notes |
-|----|------|------|------|
-| T-058 | Replace linear production speed with inverse scaling | engine | Update `prod_speed` in production_resolution to `1 / (1 - mod)` |
-| T-059 | Add `economic_phase_key` to company schema | contracts | Add column and mark as `required: true` |
-| T-060 | Load company → economic_phase mapping | engine | Build `company_key → economic_phase_key` lookup |
-| T-061 | Load building phase multipliers | engine | Build `building_key → recession/boom multipliers` map |
-| T-062 | Apply phase multiplier to production | engine | Multiply production by building-level phase multiplier |
-| T-063 | Normalize Normal phase behavior | engine | Ensure phase key = 1 → multiplier = `1.0` |
-| T-064 | Replace linear sales speed with inverse scaling | engine | Update retail capacity to use `1 / (1 - sales_speed_delta)` |
-| T-065 | Apply phase multiplier to retail throughput | engine | Multiply retail capacity by phase multiplier |
-| T-066 | Validate company phase key integrity | validation | Ensure all `economic_phase_key` values exist in reference table |
-| T-067 | Validate production vs game (BL=1 test) | validation | Power BL=1 at 4% → 2673.90 expected |
-| T-068 | Validate production aggregation behavior | validation | Ensure BL scaling remains consistent post-change |
-| T-069 | Validate recession vs boom production | validation | Recession increases output, boom decreases output |
-| T-070 | Validate retail behavior under phase | validation | Retail allocation should shift with phase multiplier |
 | T-071 | Ensure phase multiplier applied once | engine | Prevent duplicate application across stages |
+| T-084 | Review and update documentation for core engine physics | docs | Pending | Update production, BOM, and retail sections to reflect new formulas and table structures |
+| T-082 | Backfill missing product slopes | data | Pending | derive from in-game tests |
+| T-083 | Backfill boom phase multipliers | data | Pending | requires new test data |
+| T-098 | Add structured comments and improve readability across engine | docs/code | ⏳ Pending | Focus on explaining data flow, invariants, and loop intent for non-imperative readers |
+| T-099 | Refactor stage helpers into contract-driven inputs | engine | ⏳ Pending | Replace `_k()` and `_require_*` usage with trusted, typed values from io_csv + validator; retain only business-rule invariants |
 
 ---
 
@@ -93,6 +83,37 @@ Rules:
 | T-055 | Define `table.schema.json` to validate all `kind: table` contracts | contracts |  | Enforce top-level fields, field structure, keys consistency |
 | T-056 | Define `lookup.schema.json` to validate `kind: lookup_mapping` contracts | contracts |  | Enforce lookup mapping structure |
 | T-057 | Integrate schema validation step before contract loading | validation |  | Validate contract YAML against meta-schema before runtime |
+| T-058 | Replace linear production speed with inverse scaling | engine | Update `prod_speed` in production_resolution to `1 / (1 - mod)` |
+| T-059 | Add `economic_phase_key` to company schema | contracts | Add column and mark as `required: true` |
+| T-060 | Load company → economic_phase mapping | engine | Build `company_key → economic_phase_key` lookup |
+| T-061 | Load building phase multipliers | engine | Build `building_key → recession/boom multipliers` map |
+| T-062 | Apply phase multiplier to production | engine | Multiply production by building-level phase multiplier |
+| T-063 | Normalize Normal phase behavior | engine | Ensure phase key = 1 → multiplier = `1.0` |
+| T-066 | Validate company phase key integrity | validation | Ensure all `economic_phase_key` values exist in reference table |
+| T-067 | Validate production vs game (BL=1 test) | validation | Power BL=1 at 4% → 2673.90 expected |
+| T-068 | Validate production aggregation behavior | validation | Ensure BL scaling remains consistent post-change |
+| T-069 | Validate recession vs boom production | validation | Recession increases output, boom decreases output |
+| T-072 | Refactor BOM consumption to direct-only inputs | engine | ✅ Complete | Removed recursive expansion, fixed double-counting |
+| T-074 | Replace retail sales speed with inverse scaling | engine | Pending | Use `1 / (1 - sales_speed_delta)` |
+| T-075 | Add retail_quality_model table | data | Pending | product_key × building_key slope |
+| T-076 | Add retail_phase_multiplier table | data | Pending | product_key × phase multiplier |
+| T-077 | Integrate QL slope into retail calc | engine | Pending | `1 + slope × QL` |
+| T-078 | Integrate phase multiplier into retail calc | engine | Pending | product-level phase |
+| T-079 | Validate Oranges vs Orange Juice retail behavior | validation | Pending | ensure slopes differ correctly |
+| T-080 | Validate Fashion products (Dresses, Necklaces) | validation | Pending | confirm higher QL slopes |
+| T-081 | Validate recession vs normal retail outputs | validation | Pending | confirm phase multipliers |
+| T-070 | Validate retail behavior under phase | validation | Retail allocation should shift with phase multiplier |
+| T-073 | Validate BOM consumption vs production (Power net sanity) | validation | ⏳ Pending | Expect Power consumption < production for company 1 |
+| T-064 | Replace linear sales speed with inverse scaling | engine | Update retail capacity to use `1 / (1 - sales_speed_delta)` |
+| T-065 | Apply phase multiplier to retail throughput | engine | Multiply retail capacity by phase multiplier |
+| T-090 | Validate balance_plan net flow correctness | validation | ⏳ Pending | Production − consumption − retail demand must reconcile per product |
+| T-091 | Validate Power net sanity across full pipeline | validation | ⏳ Pending | Ensure Power surplus from production persists after clearing |
+| T-092 | Validate clearing_result retail allocation | validation | ⏳ Pending | Retail should consume up to capacity, then overflow to exchange |
+| T-093 | Validate clearing priority ordering | validation | ⏳ Pending | Retail → Contract → Exchange must be enforced correctly |
+| T-094 | Validate no double-counting between BOM and clearing | validation | ⏳ Pending | Ensure intermediate goods not consumed twice |
+| T-095 | Validate channel allocation consistency | validation | ⏳ Pending | Sum(retail + contract + exchange) = available supply |
+| T-096 | Validate phase impact propagates through clearing | validation | ⏳ Pending | Demand shifts should move allocation mix, not just totals |
+| T-097 | Validate negative/overdraw conditions | validation | ⏳ Pending | No product should allocate beyond available supply |
 
 ---
 
