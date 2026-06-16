@@ -1,0 +1,41 @@
+kind: table
+version: 1
+table: retail_plan
+surface: input
+
+intent: >
+  Defines the priority order of retail building types for each product.
+  Retail demand will cascade across buildings in priority order, constrained by capacity.
+
+presence:
+  required: false
+  non_empty: false
+
+keys:
+  - company_key
+  - product_key
+  - quality_level
+  - building_key
+
+fields:
+  company_key:
+    type: string
+    required: true
+
+  product_key:
+    type: string
+    required: true
+
+  quality_level:
+    type: string
+    required: true
+
+  building_key:
+    type: string
+    required: true
+
+  priority:
+    type: int
+    required: true
+    constraints:
+      min: 1

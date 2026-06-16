@@ -1,0 +1,49 @@
+kind: table
+version: 1
+table: retail_allocation_result
+surface: output
+
+intent: >
+  Building-level retail allocation of product demand.
+  Expands product-level retail allocations into prioritized building types,
+  applying capacity constraints and quality-level effects.
+
+presence:
+  required: true
+  non_empty: false
+
+keys:
+  - company_key
+  - product_key
+  - quality_level
+  - building_key
+  - priority
+
+fields:
+  company_key:
+    type: string
+    required: true
+
+  product_key:
+    type: string
+    required: true
+
+  quality_level:
+    type: string
+    required: true
+
+  building_key:
+    type: string
+    required: true
+
+  priority:
+    type: int
+    required: true
+    constraints:
+      min: 1
+
+  allocated_units_per_hour:
+    type: float
+    required: true
+    constraints:
+      min: 0

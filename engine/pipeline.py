@@ -13,6 +13,7 @@ from engine.stages.production_resolution import stage_production_resolution
 from engine.stages.product_bom_consumption import stage_product_bom_consumption
 from engine.stages.balance import stage_balance
 from engine.stages.clearing_allocation import stage_clearing_allocation
+from engine.stages.retail_allocation import stage_retail_allocation
 
 # ============================================================
 # Stage: SCENARIO
@@ -39,6 +40,7 @@ def run_pipeline(inputs: ContractInputs) -> ContractOutputs:
     state = stage_product_bom_consumption(state)
     state = stage_balance(state)
     state = stage_clearing_allocation(state)
+    state = stage_retail_allocation(state)    
 
     from pprint import pprint
 
@@ -50,5 +52,6 @@ def run_pipeline(inputs: ContractInputs) -> ContractOutputs:
             "balance_plan": state["balance_plan"],
             "clearing_result": state["clearing_result"],
             "allocation_summary": state["allocation_summary"],
+            "retail_allocation_result": state["retail_allocation_result"],
         }
     )
