@@ -15,12 +15,6 @@ Rules:
 
 | ID | Task | Layer | Status | Notes |
 |----|------|------|--------|------|
-| T-071 | Ensure phase multiplier applied once | engine | Prevent duplicate application across stages |
-| T-084 | Review and update documentation for core engine physics | docs | Pending | Update production, BOM, and retail sections to reflect new formulas and table structures |
-| T-082 | Backfill missing product slopes | data | Pending | derive from in-game tests |
-| T-083 | Backfill boom phase multipliers | data | Pending | requires new test data |
-| T-098 | Add structured comments and improve readability across engine | docs/code | ⏳ Pending | Focus on explaining data flow, invariants, and loop intent for non-imperative readers |
-| T-099 | Refactor stage helpers into contract-driven inputs | engine | ⏳ Pending | Replace `_k()` and `_require_*` usage with trusted, typed values from io_csv + validator; retain only business-rule invariants |
 
 ---
 
@@ -30,6 +24,10 @@ Rules:
 |----|------|------|------|
 | T-005 | Functional coding audit | All | ARCHITECTURE, DECISIONS |
 | T-004 | Add core unit tests | tooling | In Progress | TOOLING.md |
+| T-082 | Backfill missing product slopes | data | Pending | derive from in-game tests |
+| T-083 | Backfill boom phase multipliers | data | Pending | requires new test data |
+| T-099 | Refactor stage helpers into contract-driven inputs | engine | ⏳ Pending | Replace `_k()` and `_require_*` usage with trusted, typed values from io_csv + validator; retain only business-rule invariants |
+| T-098 | Add structured comments and improve readability across engine | docs/code | ⏳ Pending | Focus on explaining data flow, invariants, and loop intent for non-imperative readers |
 
 ---
 
@@ -114,6 +112,8 @@ Rules:
 | T-095 | Validate channel allocation consistency | validation | ⏳ Pending | Sum(retail + contract + exchange) = available supply |
 | T-096 | Validate phase impact propagates through clearing | validation | ⏳ Pending | Demand shifts should move allocation mix, not just totals |
 | T-097 | Validate negative/overdraw conditions | validation | ⏳ Pending | No product should allocate beyond available supply |
+| T-071 | Ensure phase multiplier applied once | engine | Prevent duplicate application across stages |
+| T-084 | Review and update documentation for core engine physics | docs | Pending | Update production, BOM, and retail sections to reflect new formulas and table structures |
 
 ---
 

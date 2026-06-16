@@ -1,27 +1,26 @@
-# DATA CONTRACTS
+## DATA CONTRACTS
 
-## Purpose
+### Purpose
 
 Define the data contract surfaces for the SimCo Planner engine.
 
 This document describes:
-
 - input tables
 - reference tables
 - engine output tables
 - table grain
 - invariants
 
-The contract definitions (`contracts/*.yml`) are the authoritative definition of structure, typing, and validation behavior. 
-This document defines meaning, grain, and invariants.
-
-For contract structure, typing, and validation rules, see `CONTRACT_SPEC.md`.
+The contract definitions (contracts/*.yml) are the authoritative definition of structure, typing, and validation behavior.
 
 This document defines meaning, grain, and invariants only.
 
+For contract structure:
+→ see CONTRACT_SPEC.md
+
 ---
 
-## Contract Boundary
+# Contract Boundary
 
 The engine contract boundary is:
 
@@ -29,7 +28,7 @@ data/runtime/input/*.csv
 data/runtime/reference/*.csv  
 data/runtime/output/*.csv  
 
-Rules:
+### Rules
 
 - CSV is the only contract boundary
 - No implicit inputs or outputs
@@ -38,78 +37,86 @@ Rules:
 
 ---
 
-## Contract Model
+# Contract Model
 
 All table surfaces are defined through external contract files.
 
 Contracts define:
-- table presence
-- column structure
-- data types
+- structure
+- typing
+- keys
 - constraints
-- identity keys
-- validation behavior
 
 Rules:
 
-- Contracts are the single source of truth for all table structure
-- The engine must not hardcode table definitions or validation rules
-- All tables must be explicitly defined in contracts before use
-- Contract files must be complete (no partial schema definitions)
-- Engine logic must not infer structure from CSV data
-- Contract files must explicitly declare their type using `kind`
-
-Contract types:
-
-- `kind: table` → defines CSV table structure
-- `kind: lookup_mapping` → defines UI lookup behavior
+- Contracts are the single source of truth
+- Engine must not infer schema
+- All tables must exist in contracts before use
 
 ---
 
-## Contract Discovery
+# Contract Discovery
 
-The engine must dynamically discover contract definitions.
-
-Rules:
-
-- Contract files must be read from the contracts directory
-- Engine must not rely on fixed filenames
-- Adding a new contract must not require code changes
-- All contract files within a category must be loaded and merged
-
-Categories:
+Contracts are dynamically discovered from:
 
 - contracts/input
 - contracts/reference
 - contracts/output
-- contracts/ui
-- contracts/internal
+
+Rules:
+
+- No hardcoded table definitions
+- Adding a contract does not require code changes
 
 ---
 
 # INPUT TABLES
 
-Defined in: contracts/input_tables.yml
-
 User-controlled surfaces.
 
-Tables:
+### Tables
+
 - company
 - map_structure
 - production_plan
 - clearing_plan
+- retail_plan
 - override_exchange_prices
 - override_retail_prices
 
 ---
 
-# REFERENCE TABLES
+## retail_plan
 
-Defined in: contracts/reference_tables.yml
+### Purpose
+
+Defines which retail building types are used for each product and in what priority order.
+
+### Grain
+
+company_key | product_key | quality_level | building_key
+
+### Behavior
+
+- Lower priority number executes first
+- Defines building *types*, not specific instances
+- Drives downstream retail allocation
+
+### Invariants
+
+- Must exist for any product routed to Retail
+- Priorities must be unique per (company, product, quality)
+- building_key must exist on the map
+- building_key must be valid for product
+
+---
+
+# REFERENCE TABLES
 
 System-controlled domain surfaces.
 
-Tables:
+### Tables
+
 - building
 - building_category
 - building_bom
@@ -118,6 +125,8 @@ Tables:
 - exchange_prices
 - retail_prices
 - retail_product_building
+- retail_quality_model
+- retail_phase_multiplier
 - channel
 - realm
 - economic_role
@@ -127,28 +136,9 @@ Tables:
 
 ---
 
-# UI CONTRACTS
-
-Defined in: contracts/ui_lookups.yml
-
-UI contracts define lookup and validation behavior for Excel surfaces.
-
-Rules:
-
-- UI behavior must be fully contract-driven
-- Lookup mappings must not be duplicated in code
-- UI contracts do not define engine data structure
-- UI contracts must reference reference tables for lookup sources
-- UI logic must not modify or reinterpret engine data
-
----
-
 # ENGINE OUTPUT TABLES
 
-Defined in: contracts/output_tables.yml
-
-These are resolved, deterministic fact tables.  
-They are NOT diagnostics or guidance.
+Resolved, deterministic fact tables.
 
 ---
 
@@ -158,15 +148,11 @@ Grain:
 company_key | product_key | quality_level
 
 Fields:
-company_key  
-product_key  
-quality_level  
-units_produced_per_hour  
+- units_produced_per_hour
 
 Invariants:
-- units_produced_per_hour ≥ 0
-- Production is computed at full capacity
-- No bottleneck constraints applied
+- ≥ 0
+- Full capacity only
 
 ---
 
@@ -176,16 +162,12 @@ Grain:
 company_key | product_key | quality_level
 
 Fields:
-company_key  
-product_key  
-quality_level  
-units_consumed_per_hour  
+- units_consumed_per_hour
 
 Invariants:
-- units_consumed_per_hour ≥ 0
-- Consumption derived strictly from BOM
-- No routing or priority logic
-- Globally aggregated
+- ≥ 0
+- BOM-derived only
+- No routing
 
 ---
 
@@ -195,20 +177,16 @@ Grain:
 company_key | product_key | quality_level
 
 Fields:
-company_key  
-product_key  
-quality_level  
-units_produced_per_hour  
-units_consumed_per_hour  
-net_units_per_hour  
-surplus_units_per_hour  
-shortage_units_per_hour  
+- units_produced_per_hour
+- units_consumed_per_hour
+- net_units_per_hour
+- surplus_units_per_hour
+- shortage_units_per_hour
 
 Invariants:
-- net_units_per_hour = produced - consumed
+- net = produced − consumed
 - surplus = max(net, 0)
 - shortage = max(-net, 0)
-- Exactly one of surplus or shortage is non-zero
 
 ---
 
@@ -217,38 +195,18 @@ Invariants:
 Grain:
 company_key | product_key | quality_level | priority | channel_key
 
-Fields:
-company_key  
-product_key  
-quality_level  
-priority  
-channel_key  
-direction  
-allocated_units_per_hour  
-
-Invariants:
-- allocated_units_per_hour ≥ 0
-- Direction determines allowed channels
-- Allocation applied sequentially by priority
-- Allocation operates on remaining quantity
-
----
-
-## clearing_remainder
-
-Grain:
-company_key | product_key | quality_level
+Meaning:
+Product-level routing across channels.
 
 Fields:
-company_key  
-product_key  
-quality_level  
-direction  
-remaining_units_per_hour  
+- direction
+- allocated_units_per_hour
 
 Invariants:
-- remaining_units_per_hour ≥ 0
-- Represents unresolved imbalance
+- allocated ≥ 0
+- Sequential by priority
+- Uses remaining quantity
+- Retail is capped here, not distributed
 
 ---
 
@@ -258,57 +216,72 @@ Grain:
 company_key | product_key | quality_level
 
 Fields:
-company_key  
-product_key  
-quality_level  
-total_units_per_hour  
-retail_units_per_hour  
-non_retail_units_per_hour  
-is_retail_capped  
+- total_units_per_hour
+- retail_units_per_hour
+- non_retail_units_per_hour
+- is_retail_capped
 
 Invariants:
-- total ≥ 0
-- retail ≥ 0
-- non_retail ≥ 0
 - retail + non_retail = total
+
+---
+
+## retail_allocation_result
+
+Grain:
+company_key | product_key | quality_level | building_key | priority
+
+Meaning:
+Building-level allocation of Retail channel output.
+
+Fields:
+- allocated_units_per_hour
+
+Behavior:
+- Distributes cleared retail demand
+- Uses retail_plan priority cascade
+- Applies building capacity constraints
+
+Invariants:
+- allocated ≥ 0
+- Sum(building allocations) = clearing_result retail
+- No over-allocation
+- Honors priority order
 
 ---
 
 # SYSTEM INVARIANTS
 
-Production:
-- Production ≥ 0
+## Production
+- ≥ 0
 - Full capacity only
 
-Consumption:
-- BOM-driven only
-- No routing
+## Consumption
+- Strictly BOM-driven
 
-Balance:
-- net = produced - consumed
+## Balance
+- net = produced − consumed
 
-Clearing:
+## Clearing
 - allocated + remainder = abs(net)
-- No negative allocations
-- Sequential priority logic
+- Sequential by priority
 
-Determinism:
+## Retail Allocation
+- Operates only on Retail channel
+- Distributes — does not calculate demand
+- Fully reconciles to clearing_result
+
+## Determinism
 - Same inputs → same outputs
-- No implicit behavior
 
-Contract Enforcement:
-- All tables must conform exactly to contract definitions
-- Extra or missing columns must fail validation
-- All required fields must be present and valid
-- All key and uniqueness constraints must be enforced
-- Required/non-empty table semantics must be defined in contracts
-- Engine must perform no structural inference or correction
+## Contract Enforcement
+- No missing fields
+- No extra fields
+- No implicit behavior
 
 ---
 
-# SUMMARY
-
-Pipeline:
+# PIPELINE
 
 INPUT  
 → VALIDATION  
@@ -316,11 +289,20 @@ INPUT
 → PRODUCTION_RESOLUTION  
 → BOM_CONSUMPTION  
 → BALANCE  
-→ CLEARING  
-→ ENGINE OUTPUT  
+→ CLEARING (product-level routing + retail capacity cap)  
+→ RETAIL_ALLOCATION (building-level distribution)  
+→ OUTPUT  
 
-Outputs represent the complete resolved system state.
+---
 
-All diagnostics and guidance must be built on top of these tables.All diagnostics and guidance must be built on top of these tables engine executes strictly against these contracts.
+# SUMMARY
 
-Contracts define all data structure and validation behavior.  
+The engine produces:
+
+- product-level flows (clearing_result)
+- building-level retail flows (retail_allocation_result)
+
+All downstream logic must build on these outputs.
+
+Contracts define all structure.  
+The engine executes strictly against contracts.
