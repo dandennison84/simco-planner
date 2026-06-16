@@ -1,0 +1,54 @@
+kind: table
+version: 1
+table: retail_bottleneck_detail
+surface: output
+
+intent: >
+  Identifies retail capacity utilization at the building level,
+  showing which retail buildings are acting as bottlenecks.
+
+presence:
+  required: true
+  non_empty: false
+
+keys:
+  - company_key
+  - product_key
+  - quality_level
+  - building_key
+
+fields:
+  company_key:
+    type: string
+    required: true
+
+  product_key:
+    type: string
+    required: true
+
+  quality_level:
+    type: string
+    required: true
+
+  building_key:
+    type: string
+    required: true
+
+  allocated_units_per_hour:
+    type: float
+    required: true
+    constraints:
+      min: 0
+
+  capacity_units_per_hour:
+    type: float
+    required: true
+    constraints:
+      min: 0
+
+  capacity_used_pct:
+    type: float
+    required: true
+    constraints:
+      min: 0
+      max: 1

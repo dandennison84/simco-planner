@@ -619,6 +619,27 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
 
         capped = retail_alloc < total_initial and retail_alloc > 0
 
+        # ---------------------------------------------------------
+        # Compute retail shortfall + capture ratio
+        # ---------------------------------------------------------
+
+        if retail_alloc <= 1e-12:
+            # No retail participation
+            retail_shortfall = 0.0
+            retail_capture_pct = 0.0
+        else:
+            retail_shortfall = max(0.0, total_initial - retail_alloc)
+
+            retail_capture_pct = (
+                retail_alloc / total_initial
+                if total_initial > 0
+                else 0.0
+            )
+
+        # ---------------------------------------------------------
+        # Build allocation summary row
+        # ---------------------------------------------------------
+
         allocation_summary.append(
             {
                 "company_key": company_key,
@@ -627,6 +648,8 @@ def stage_clearing_allocation(state: Dict[str, object]) -> Dict[str, object]:
                 "total_units_per_hour": total_initial,
                 "retail_units_per_hour": retail_alloc,
                 "non_retail_units_per_hour": non_retail_alloc,
+                "retail_shortfall_units_per_hour": retail_shortfall,
+                "retail_capture_pct": retail_capture_pct,
                 "is_retail_capped": capped,
             }
         )

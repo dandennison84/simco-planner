@@ -2,7 +2,10 @@ kind: table
 version: 1
 table: allocation_summary
 surface: output
-intent: Allocation breakdown by retail vs non-retail
+
+intent: >
+  Product-level allocation summary showing total flow,
+  retail utilization, and retail capacity constraints.
 
 presence:
   required: true
@@ -29,14 +32,33 @@ fields:
   total_units_per_hour:
     type: float
     required: true
+    constraints:
+      min: 0
 
   retail_units_per_hour:
     type: float
     required: true
+    constraints:
+      min: 0
 
   non_retail_units_per_hour:
     type: float
     required: true
+    constraints:
+      min: 0
+
+  retail_shortfall_units_per_hour:
+    type: float
+    required: true
+    constraints:
+      min: 0
+
+  retail_capture_pct:
+    type: float
+    required: true
+    constraints:
+      min: 0
+      max: 1
 
   is_retail_capped:
     type: boolean

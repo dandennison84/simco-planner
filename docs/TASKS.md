@@ -15,6 +15,12 @@ Rules:
 
 | ID | Task | Layer | Status | Notes |
 |----|------|------|--------|------|
+| T-100 | Add retail_bottleneck_detail output | engine | ⏳ Pending | Expose building-level capacity usage (allocated vs capacity) to identify which retail buildings are constraining sales |
+| T-101 | Add product_flow_classification output | engine | ⏳ Pending | Classify each product as surplus / shortage / balanced using balance_plan.net_units_per_hour |
+| T-102 | Add retail_unused_capacity output | engine | ⏳ Pending | Show unused retail capacity per building (capacity − allocated) to highlight overbuilt retail structures |
+| T-103 | Add allocation_ratios output | engine | ⏳ Pending | Compute retail vs non-retail share (retail_pct, non_retail_pct) for easier interpretation of allocation_summary |
+| T-104 | Add retail_priority_path output | engine | ⏳ Pending | Expose ordered building priority per product from retail_plan to support multi-building retail cascade visibility |
+| T-105 | Add constraint_type output | engine | ⏳ Pending | Classify constraint driver per product (retail_constrained, supply_constrained, balanced) using allocation_summary + balance |
 
 ---
 
