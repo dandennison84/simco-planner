@@ -56,5 +56,6 @@ def run_pipeline(inputs: ContractInputs) -> ContractOutputs:
             "retail_bottleneck_detail": state["retail_bottleneck_detail"],
             "product_flow_classification": state["product_flow_classification"],
             "product_role_classification": state["product_role_classification"],
+            "retail_unused_capacity": state["retail_unused_capacity"],
         }
     )

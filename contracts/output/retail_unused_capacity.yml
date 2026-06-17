@@ -1,0 +1,54 @@
+kind: table
+version: 1
+table: retail_unused_capacity
+surface: output
+
+intent: >
+  Shows unused retail capacity per building after retail allocation.
+  Used to identify overbuilt or underutilized retail structures.
+
+presence:
+  required: true
+  non_empty: false
+
+keys:
+  - company_key
+  - product_key
+  - quality_level
+  - building_key
+  - priority
+
+fields:
+  company_key:
+    type: int
+    required: true
+
+  product_key:
+    type: int
+    required: true
+
+  quality_level:
+    type: int
+    required: true
+
+  building_key:
+    type: int
+    required: true
+
+  priority:
+    type: int
+    required: true
+    constraints:
+      min: 1
+
+  unused_units_per_hour:
+    type: float
+    required: true
+    constraints:
+      min: 0
+
+  capacity_units_per_hour:
+    type: float
+    required: true
+    constraints:
+      min: 0

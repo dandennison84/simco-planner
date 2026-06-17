@@ -313,10 +313,9 @@ def stage_retail_allocation(state: Dict[str, object]) -> Dict[str, object]:
     # ---------------------------------------------------------
     # Allocate retail demand across building priorities
     # ---------------------------------------------------------
-    retail_allocation_result: List[dict] = {}
-    retail_allocation_result = []
-    retail_bottleneck_detail: List[dict] = {}
-    retail_bottleneck_detail = []
+    retail_allocation_result: List[dict] = []
+    retail_bottleneck_detail: List[dict] = []
+    retail_unused_capacity: List[dict] = []
 
     building_level_alloc_sum: Dict[Tuple[str, str, str], float] = defaultdict(float)
 
@@ -432,50 +431,58 @@ def stage_retail_allocation(state: Dict[str, object]) -> Dict[str, object]:
 
             allocated = min(remaining, capacity)
 
-            if allocated <= 0:
-                continue
+            if allocated > 0:
+                remaining -= allocated
+                building_level_alloc_sum[key] += allocated
 
-            remaining -= allocated
-            building_level_alloc_sum[key] += allocated
+                retail_allocation_result.append(
+                    {
+                        "company_key": company_key,
+                        "product_key": product_key,
+                        "quality_level": quality_level,
+                        "building_key": building_key,
+                        "priority": priority,
+                        "allocated_units_per_hour": allocated,
+                    }
+                )
+
+                # ---------------------------------------------------------
+                # Record bottleneck detail
+                # ---------------------------------------------------------
+                if capacity > 0:
+                    capacity_used_pct = allocated / capacity
+                else:
+                    capacity_used_pct = 0.0
+
+                retail_bottleneck_detail.append(
+                    {
+                        "company_key": company_key,
+                        "product_key": product_key,
+                        "quality_level": quality_level,
+                        "building_key": building_key,
+                        "allocated_units_per_hour": allocated,
+                        "capacity_units_per_hour": capacity,
+                        "capacity_used_pct": capacity_used_pct,
+                    }
+                )
 
             # ---------------------------------------------------------
-            # Record building-level allocation
+            # Record unused capacity
+            # This is emitted even when allocated = 0, as long as capacity exists.
             # ---------------------------------------------------------
+            unused_units = max(0.0, capacity - allocated)
 
-            retail_allocation_result.append(
+            retail_unused_capacity.append(
                 {
                     "company_key": company_key,
                     "product_key": product_key,
                     "quality_level": quality_level,
                     "building_key": building_key,
                     "priority": priority,
-                    "allocated_units_per_hour": allocated,
+                    "unused_units_per_hour": unused_units,
+                    "capacity_units_per_hour": capacity,
                 }
             )
-
-            # ---------------------------------------------------------
-            # Record bottleneck detail (capacity utilization)
-            # This uses the same computed capacity used for allocation.
-            # Invariant:
-            #   0 <= capacity_used_pct <= 1 (unless upstream capacity bug exists)
-            # ---------------------------------------------------------
-
-            if capacity > 0:
-                capacity_used_pct = allocated / capacity
-            else:
-                capacity_used_pct = 0.0
-
-            retail_bottleneck_detail.append(
-                {
-                    "company_key": company_key,
-                    "product_key": product_key,
-                    "quality_level": quality_level,
-                    "building_key": building_key,
-                    "allocated_units_per_hour": allocated,
-                    "capacity_units_per_hour": capacity,
-                    "capacity_used_pct": capacity_used_pct,
-                }
-            )            
 
             if remaining <= 1e-12:
                 break
@@ -492,10 +499,12 @@ def stage_retail_allocation(state: Dict[str, object]) -> Dict[str, object]:
         state,
         retail_allocation_result=retail_allocation_result,
         retail_bottleneck_detail=retail_bottleneck_detail,
+        retail_unused_capacity=retail_unused_capacity,
     )
 
     debug_rows(out, "retail_allocation", "retail_allocation_result")
     debug_rows(out, "retail_allocation", "retail_bottleneck_detail")
+    debug_rows(out, "retail_allocation", "retail_unused_capacity")
 
     # ---------------------------------------------------------
     # Invariant: building allocations must sum back to retail clearing amount

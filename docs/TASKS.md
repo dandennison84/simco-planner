@@ -15,10 +15,9 @@ Rules:
 
 | ID | Task | Layer | Status | Notes |
 |----|------|------|--------|------|
-| T-102 | Add retail_unused_capacity output | engine | ⏳ Pending | Show unused retail capacity per building (capacity − allocated) to highlight overbuilt retail structures |
-| T-103 | Add allocation_ratios output | engine | ⏳ Pending | Compute retail vs non-retail share (retail_pct, non_retail_pct) for easier interpretation of allocation_summary |
-| T-104 | Add retail_priority_path output | engine | ⏳ Pending | Expose ordered building priority per product from retail_plan to support multi-building retail cascade visibility |
-| T-105 | Add constraint_type output | engine | ⏳ Pending | Classify constraint driver per product (retail_constrained, supply_constrained, balanced) using allocation_summary + balance |
+T-103 | Add allocation_ratios output | engine | ⏳ Pending | Compute retail vs non-retail share from allocation_summary for UX interpretation
+T-104 | Add retail_priority_path output | engine | ⏳ Pending | Surface retail_plan priority ordering per product for debugging allocation cascade
+T-105 | Add constraint_type output | engine | ⏳ Pending | Classify constraint driver per product (retail_constrained, supply_constrained, balanced) using allocation_summary and balance_plan
 
 ---
 
@@ -123,6 +122,7 @@ Rules:
 | T-107 | Standardize _out_* Power Query outputs (joins, naming, column order) | UI / Power Query | ⏳ Pending | Ensure all _out_* queries enrich IDs with names, include company_display, and enforce consistent column ordering via final Table.SelectColumns |
 | T-108 | Add product_role_classification output | engine | ⏳ Pending | Classify each product as retail_output, pure_non_retail_output, or vi_input using clearing_plan Retail channel presence and balance_plan.units_consumed_per_hour |
 | T-106 | Add company_display field across all _out queries | UI / Power Query | ⏳ Pending | Join company table and expose company_name, realm_name, snapshot_date, plus composite company_display for consistent, readable multi-company output |
+T-102 | Add retail_unused_capacity output | engine | ⏳ Pending | Compute unused retail capacity per building using bottleneck detail (capacity - allocated)
 
 ---
 
