@@ -15,8 +15,6 @@ Rules:
 
 | ID | Task | Layer | Status | Notes |
 |----|------|------|--------|------|
-T-104 | Add retail_priority_path output | engine | ⏳ Pending | Surface retail_plan priority ordering per product for debugging allocation cascade
-T-105 | Add constraint_type output | engine | ⏳ Pending | Classify constraint driver per product (retail_constrained, supply_constrained, balanced) using allocation_summary and balance_plan
 
 ---
 
@@ -123,6 +121,8 @@ T-105 | Add constraint_type output | engine | ⏳ Pending | Classify constraint 
 T-102 | Add retail_unused_capacity output | engine | ⏳ Pending | Compute unused retail capacity per building using bottleneck detail (capacity - allocated)
 | T-005 | Functional coding audit | All | ARCHITECTURE, DECISIONS |
 | T-103 | Add allocation ratios to allocation_summary (M layer) | UI / Power Query | ⏳ Pending | Compute retail_pct and non_retail_pct in view layer from allocation_summary (no engine stage) |
+T-104 | Add retail_priority_path output | engine | ⏳ Pending | Surface retail_plan priority ordering per product for debugging allocation cascade
+T-105 | Add constraint_type output | engine | ⏳ Pending | Classify constraint driver per product (retail_constrained, supply_constrained, not_constrained) using allocation_summary and balance_plan
 
 ---
 
