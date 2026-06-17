@@ -60,6 +60,14 @@ def stage_balance(state: Dict[str, object]) -> Dict[str, object]:
             (produced − consumed)
             → split into (surplus, shortage)
 
+        product_flow_classification =
+            classify(balance_plan.net_units_per_hour)
+
+        product_role_classification =
+            classify product role using:
+              - Retail channel presence in clearing_plan
+              - units_consumed_per_hour
+
     Inputs:
         production_intent:
             (company, product, quality) → units_produced_per_hour
@@ -67,7 +75,13 @@ def stage_balance(state: Dict[str, object]) -> Dict[str, object]:
         product_bom_consumption:
             (company, product, quality) → units_consumed_per_hour
 
-    Output:
+        clearing_plan:
+            used to identify products routed to Retail
+
+        channel:
+            used to identify which channel_key values are Retail
+
+    Outputs:
         balance_plan:
             Contains:
                 - produced
@@ -76,6 +90,20 @@ def stage_balance(state: Dict[str, object]) -> Dict[str, object]:
                 - surplus (max(net, 0))
                 - shortage (max(-net, 0))
 
+        product_flow_classification:
+            Contains:
+                - company_key
+                - product_key
+                - quality_level
+                - flow_type (surplus / shortage / balanced)
+
+        product_role_classification:
+            Contains:
+                - company_key
+                - product_key
+                - quality_level
+                - product_role (retail_output / pure_non_retail_output / vi_input)
+
     Notes:
         - Union of keys ensures all products are included
         - Zero production or zero consumption still handled
@@ -83,10 +111,36 @@ def stage_balance(state: Dict[str, object]) -> Dict[str, object]:
     =============================================================================
     """
 
+    stage_name = "balance"
     debug_log(state, "[balance] start")
 
     production_rows = state.get("production_intent", [])
     consumption_rows = state.get("product_bom_consumption", [])
+    clearing_rows = state.get("clearing_plan", [])
+    channel_rows = state.get("channel", [])
+
+    # ---------------------------------------------------------
+    # Identify which channel keys are Retail
+    # ---------------------------------------------------------
+    retail_channel_keys = {
+        _k(r.get("channel_key"))
+        for r in channel_rows
+        if str(r.get("uses_retail_capacity", "")).strip().lower() in {"true", "1", "yes", "y"}
+    }
+
+    # ---------------------------------------------------------
+    # Identify products routed to Retail
+    # Grain: (company, product, quality)
+    # ---------------------------------------------------------
+    retail_output_keys = {
+        (
+            _k(r.get("company_key")),
+            _k(r.get("product_key")),
+            _k(r.get("quality_level")),
+        )
+        for r in clearing_rows
+        if _k(r.get("channel_key")) in retail_channel_keys
+    }
 
     # ---------------------------------------------------------
     # Aggregate production: group by (company, product, quality)
@@ -103,7 +157,7 @@ def stage_balance(state: Dict[str, object]) -> Dict[str, object]:
         produced_map[key] = produced_map.get(key, 0.0) + _require_float(
             r,
             "units_produced_per_hour",
-            stage="balance",
+            stage=stage_name,
             row_idx=i,
         )
 
@@ -122,7 +176,7 @@ def stage_balance(state: Dict[str, object]) -> Dict[str, object]:
         consumed_map[key] = consumed_map.get(key, 0.0) + _require_float(
             r,
             "units_consumed_per_hour",
-            stage="balance",
+            stage=stage_name,
             row_idx=i,
         )
 
@@ -134,7 +188,9 @@ def stage_balance(state: Dict[str, object]) -> Dict[str, object]:
     # ---------------------------------------------------------
     # Compute balance per key
     # ---------------------------------------------------------
-    balance_plan = []
+    balance_plan: List[dict] = []
+    product_flow_classification: List[dict] = []
+    product_role_classification: List[dict] = []
 
     for key in all_keys:
         company_key, product_key, quality_level = key
@@ -145,27 +201,73 @@ def stage_balance(state: Dict[str, object]) -> Dict[str, object]:
         # Core balance equation
         net = produced - consumed
 
+        surplus = max(net, 0.0)
+        shortage = max(-net, 0.0)
+
         balance_plan.append(
             {
                 "company_key": company_key,
                 "product_key": product_key,
                 "quality_level": quality_level,
-
                 "units_produced_per_hour": produced,
                 "units_consumed_per_hour": consumed,
                 "net_units_per_hour": net,
+                "surplus_units_per_hour": surplus,
+                "shortage_units_per_hour": shortage,
+            }
+        )
 
-                # Split into positive / negative flows
-                "surplus_units_per_hour": max(net, 0.0),
-                "shortage_units_per_hour": max(-net, 0.0),
+        # -----------------------------------------------------
+        # Flow classification
+        # -----------------------------------------------------
+        if net > 1e-12:
+            flow_type = "surplus"
+        elif net < -1e-12:
+            flow_type = "shortage"
+        else:
+            flow_type = "balanced"
+
+        product_flow_classification.append(
+            {
+                "company_key": company_key,
+                "product_key": product_key,
+                "quality_level": quality_level,
+                "flow_type": flow_type,
+            }
+        )
+
+        # -----------------------------------------------------
+        # Product role classification
+        # -----------------------------------------------------
+        if key in retail_output_keys:
+            product_role = "retail_output"
+        elif consumed > 1e-12:
+            product_role = "vi_input"
+        else:
+            product_role = "pure_non_retail_output"
+
+        product_role_classification.append(
+            {
+                "company_key": company_key,
+                "product_key": product_key,
+                "quality_level": quality_level,
+                "product_role": product_role,
             }
         )
 
     # ---------------------------------------------------------
     # Emit result
     # ---------------------------------------------------------
-    out = dict(state, balance_plan=balance_plan)
+    out = dict(
+        state,
+        balance_plan=balance_plan,
+        product_flow_classification=product_flow_classification,
+        product_role_classification=product_role_classification,
+    )
+
     debug_rows(out, "balance", "balance_plan")
+    debug_rows(out, "balance", "product_flow_classification")
+    debug_rows(out, "balance", "product_role_classification")
 
     # ---------------------------------------------------------
     # Invariant: produced - consumed == net

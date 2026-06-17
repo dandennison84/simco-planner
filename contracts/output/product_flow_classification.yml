@@ -1,0 +1,34 @@
+kind: table
+version: 1
+table: product_flow_classification
+surface: output
+
+intent: >
+  Classifies each product as surplus, shortage, or balanced
+  based on net_units_per_hour from balance_plan.
+
+presence:
+  required: true
+  non_empty: false
+
+keys:
+  - company_key
+  - product_key
+  - quality_level
+
+fields:
+  company_key:
+    type: int
+    required: true
+
+  product_key:
+    type: int
+    required: true
+
+  quality_level:
+    type: int
+    required: true
+
+  flow_type:
+    type: string
+    required: true
