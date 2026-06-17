@@ -25,7 +25,6 @@ T-105 | Add constraint_type output | engine | ⏳ Pending | Classify constraint 
 
 | ID | Task | Layer | Notes |
 |----|------|------|------|
-| T-005 | Functional coding audit | All | ARCHITECTURE, DECISIONS |
 | T-004 | Add core unit tests | tooling | In Progress | TOOLING.md |
 | T-082 | Backfill missing product slopes | data | Pending | derive from in-game tests |
 | T-083 | Backfill boom phase multipliers | data | Pending | requires new test data |
@@ -123,6 +122,7 @@ T-105 | Add constraint_type output | engine | ⏳ Pending | Classify constraint 
 | T-108 | Add product_role_classification output | engine | ⏳ Pending | Classify each product as retail_output, pure_non_retail_output, or vi_input using clearing_plan Retail channel presence and balance_plan.units_consumed_per_hour |
 | T-106 | Add company_display field across all _out queries | UI / Power Query | ⏳ Pending | Join company table and expose company_name, realm_name, snapshot_date, plus composite company_display for consistent, readable multi-company output |
 T-102 | Add retail_unused_capacity output | engine | ⏳ Pending | Compute unused retail capacity per building using bottleneck detail (capacity - allocated)
+| T-005 | Functional coding audit | All | ARCHITECTURE, DECISIONS |
 
 ---
 

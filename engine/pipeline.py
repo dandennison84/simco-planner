@@ -14,6 +14,7 @@ from engine.stages.product_bom_consumption import stage_product_bom_consumption
 from engine.stages.balance import stage_balance
 from engine.stages.clearing_allocation import stage_clearing_allocation
 from engine.stages.retail_allocation import stage_retail_allocation
+from engine.stages.constraint_type import stage_constraint_type
 
 # ============================================================
 # Stage: SCENARIO
@@ -40,7 +41,8 @@ def run_pipeline(inputs: ContractInputs) -> ContractOutputs:
     state = stage_product_bom_consumption(state)
     state = stage_balance(state)
     state = stage_clearing_allocation(state)
-    state = stage_retail_allocation(state)    
+    state = stage_constraint_type(state)
+    state = stage_retail_allocation(state)
 
     from pprint import pprint
 
@@ -57,5 +59,6 @@ def run_pipeline(inputs: ContractInputs) -> ContractOutputs:
             "product_flow_classification": state["product_flow_classification"],
             "product_role_classification": state["product_role_classification"],
             "retail_unused_capacity": state["retail_unused_capacity"],
+            "constraint_type": state["constraint_type"],
         }
     )
