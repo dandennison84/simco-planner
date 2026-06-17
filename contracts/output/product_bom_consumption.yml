@@ -26,6 +26,10 @@ fields:
     type: int
     required: true
 
+  building_key:
+    type: int
+    required: true
+    
   units_consumed_per_hour:
     type: float
     required: true

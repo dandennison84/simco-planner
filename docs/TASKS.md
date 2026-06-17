@@ -15,6 +15,7 @@ Rules:
 
 | ID | Task | Layer | Status | Notes |
 |----|------|------|--------|------|
+| T-109 | Design user-facing summary sheet (Map Health dashboard) | UI / Excel | ⏳ Pending | Create a consolidated summary view showing only actionable, non-normal conditions with combined signals (flow, role, constraint, allocation) and ratios expressed in daily units to guide building adjustments |
 
 ---
 

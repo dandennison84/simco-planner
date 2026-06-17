@@ -134,10 +134,21 @@ def stage_constraint_type(state: Dict[str, object]) -> Dict[str, object]:
         else:
             constraint_value = "not_constrained"
 
+        building_key = _k(bal.get("building_key"))
+
+        if building_key == "":
+            raise ValueError(
+                f"[{stage_name}:error]\n"
+                f"  field=building_key\n"
+                f"  context=company_key={company_key}, product_key={product_key}, quality_level={quality_level}\n"
+                f"  reason=missing building_key from balance_plan"
+            )
+
         constraint_type_rows.append(
             {
                 "company_key": company_key,
                 "product_key": product_key,
+                "building_key": building_key,
                 "quality_level": quality_level,
                 "constraint_type": constraint_value,
             }
