@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define how work moves from idea → implementation → validation.
+Define how work progresses from idea → implementation → validation.
 
 ---
 
@@ -10,7 +10,7 @@ Define how work moves from idea → implementation → validation.
 
 1. Define problem
 2. Add or update decision (DECISIONS.md)
-3. Define or update architecture if needed
+3. Update architecture if required
 4. Update or create contract definitions (if structural change)
 5. Add task (TASKS.md)
 6. Implement change
@@ -34,46 +34,45 @@ Define how work moves from idea → implementation → validation.
 
 ## Task Discipline
 
-- Tasks must be:
-  - small
-  - isolated
-  - testable
+Tasks must be:
+- small
+- isolated
+- testable
 
-- Avoid:
-  - multi-layer changes in one task
-  - ambiguous task definitions
+Avoid:
+- multi-layer changes in one task
+- ambiguous task definitions
 
 ---
 
 ## Decision Discipline
 
-- Add a decision when:
-  - architecture changes
-  - tooling changes
-  - rules are introduced
+Add a decision when:
+- architecture changes
+- tooling changes
+- rules are introduced
 
-- Do not add decisions for:
-  - minor refactors
-  - trivial fixes
+Do NOT add decisions for:
+- minor refactors
+- trivial fixes
 
 ---
 
 ## Contract Change Rules
 
-Add or modify contracts when:
-
+Update contracts when:
 - adding a new table
 - changing field structure
 - changing validation rules
 - introducing required/non-empty semantics
 - adding UI lookup behavior
 
-Do not change engine code for:
-
+Do NOT change engine code for:
 - new tables of existing type
-- adding columns within existing contract definitions
+- adding fields within existing contracts (structure only)
 
-Engine code changes must follow contract definition, not precede it.
+Rule:
+- contract changes must precede engine changes
 
 ---
 
@@ -83,7 +82,10 @@ Before any work:
 
 - Identify layer
 - Identify grain
-- Identify row behavior (preserve / expand / collapse)
+- Identify row behavior:
+  - preserve
+  - expand
+  - collapse
 
 ---
 
@@ -93,20 +95,20 @@ All structural changes must be contract-first.
 
 Rules:
 
-- No new tables without a contract definition
-- No schema changes embedded in Python
-- All structure must be defined in `/contracts`
-- Contract updates must precede engine changes
+- No new tables without a contract
+- No schema defined in engine code
+- All structure defined in `/contracts`
+- Contract updates must precede engine logic changes
 - Contract metadata must define:
   - table presence
-  - required/non-empty semantics
+  - required / non-empty semantics
   - field structure and typing
 
 Workflow:
 
 1. Modify contract
-2. Validate schema correctness
-3. Update engine only if behavior is required
+2. Validate contract correctness
+3. Update engine only if behavior requires it
 
 Goal:
 
@@ -130,9 +132,10 @@ All changes must be validated by:
 ## Summary
 
 Process enforces:
+
 - discipline
 - traceability
 - correctness
 - contract-first architecture
 
-Work must flow through defined steps.
+All work must follow defined steps.

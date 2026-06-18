@@ -1,31 +1,29 @@
 # Engine Rules Registry
 
-### Purpose
+## Purpose
 
-Define non-negotiable behavioral invariants of the engine that cannot be cleanly expressed as architectural or governance decisions.
+Define non-negotiable behavioral invariants of the engine.
 
 These rules govern:
-
-- evaluation correctness  
-- diagnostic integrity  
-- signal behavior  
-- evidence preservation  
+- evaluation correctness
+- diagnostic integrity
+- signal behavior
+- evidence preservation
 
 They are:
-
-- independent of implementation  
-- always-on constraints  
-- enforced through pipeline design, testing, and structural discipline  
+- independent of implementation
+- always-on constraints
+- enforced via structure, pipeline, and validation
 
 ---
 
 ## Rule Status Legend
 
 | Status | Meaning |
-|-------|--------|
+|--------|--------|
 | ✅ Active | Current invariant |
-| ❌ Superseded | No longer valid (retained for history) |
-| ⚠️ Partial | Not fully implemented yet |
+| ❌ Superseded | No longer valid |
+| ⚠️ Partial | Not fully implemented |
 
 ---
 
@@ -33,79 +31,107 @@ They are:
 
 | RuleId | Status | Supersedes | ReplacedBy | Domain | Rule | Rationale | Enforcement | Notes |
 |--------|--------|-----------|------------|--------|------|-----------|-------------|-------|
-| 1 | ✅ |  |  | Signals | Signals must be derived only from fact surfaces | Prevents dependence on unstable intermediate data | Signal layer design | Ensures composability |
-| 2 | ✅ |  |  | Signals | Signals must preserve full evaluation grain | Prevents loss of context and incorrect aggregation | Schema + evaluation logic | All context keys required |
-| 3 | ✅ |  |  | Evidence | Signals must include Evidence preserving causal row identity | Enables traceability and diagnostics | Signal generation | Evidence captured pre-aggregation |
-| 4 | ✅ |  |  | Signals | Suppression must operate at full signal grain | Prevents cross-context suppression errors | Signal engine logic | No partial matching |
-| 5 | ✅ |  |  | Signals | Signals must not implicitly aggregate or deduplicate rows | Preserves event-level correctness | Query design discipline | Explicit collapse only |
-| 6 | ✅ |  |  | Evidence | Evidence represents row-level causality and must not be interpreted as entity counts | Prevents misinterpretation of diagnostics | Diagnostics layer discipline | Distinguish row vs entity counts |
-| 7 | ✅ |  |  | Contracts | Engine must not define or infer table structure | Prevents drift between contracts and runtime behavior | Contract-first architecture enforcement | All structure comes from contracts |
-| 8 | ✅ |  |  | Contracts | Engine must not hardcode table presence or requiredness | Enables adding new tables without code changes | Contract metadata enforcement | Replaces hardcoded checks in run.py |
-| 9 | ✅ |  |  | Contracts | All table validation behavior must be derived from contracts | Prevents duplication of validation logic | Schema-driven validation layer | Includes required/non-empty semantics |
-| 10 | ✅ |  |  | Contracts | Contract definitions must be complete and self-sufficient | Partial schema definitions create ambiguity and require defensive logic | Contract validation discipline | Fields, types, constraints, keys all required |
-| 11 | ✅ |  |  | Contracts | Contract files must be explicitly typed | Prevents ambiguous parsing and interpretation | Contract parser enforcement | Uses `kind: table`, `kind: lookup_mapping` |
-| 12 | ✅ |  |  | Contracts | Engine must dynamically discover contract definitions | Prevents static schema loading and enables extensibility | Contract discovery logic | No reliance on fixed filenames |
-| 13 | ✅ |  |  | Tooling | UI behavior must be fully derived from contract definitions | Prevents duplication between YAML and code | Template builder design | Eliminates hardcoded LOOKUPS |
+| 1 | ✅ | | | Signals | Signals must be derived only from fact surfaces | Prevents unstable dependencies | Signal layer design | |
+| 2 | ✅ | | | Signals | Signals must preserve full evaluation grain | Prevents incorrect aggregation | Schema + logic | |
+| 3 | ✅ | | | Evidence | Signals must include row-level evidence | Enables traceability | Signal generation | |
+| 4 | ✅ | | | Signals | Suppression must operate at full grain | Prevents cross-context errors | Signal logic | |
+| 5 | ✅ | | | Signals | Signals must not implicitly aggregate | Preserves correctness | Query design | |
+| 6 | ✅ | | | Evidence | Evidence must represent row-level causality | Prevents misinterpretation | Diagnostics discipline | |
+
+| 7 | ✅ | | | Contracts | Engine must not define schema | Prevents drift | Contract-first enforcement | |
+| 8 | ✅ | | | Contracts | Engine must not hardcode table presence | Enables extensibility | Contract metadata | |
+| 9 | ✅ | | | Contracts | Validation must be contract-driven | Prevents duplication | Validator layer | |
+| 10 | ✅ | | | Contracts | Contracts must be complete | Avoid ambiguity | Validation discipline | |
+| 11 | ✅ | | | Contracts | Contracts must declare kind | Prevents ambiguity | Parser | |
+| 12 | ✅ | | | Contracts | Contracts must be dynamically discovered | Enables extensibility | Loader | |
+| 13 | ✅ | | | Tooling | UI logic must be contract-driven | Prevents duplication | Template builder | |
 
 ---
 
-## Principles
+## Product Grain Invariants
 
-- These rules are **never optional**
-- These rules are **not decisions** — they are invariants
-- These rules apply wherever Signals, Facts, or Evidence exist
-- Contract enforcement must be systemic and cannot rely on implementation discipline alone
-- These rules must be enforced by:
-  - schema design  
-  - pipeline structure  
-  - testing  
-  - code review discipline  
+- All product-level tables must include building_key
+- Product identity is:
+
+  (company, product, building, quality)
+
+- No joins may occur on product without building_key
+- Aggregation must occur only after slot-level computation
 
 ---
 
-## Summary
+## Pipeline Invariants
 
-This registry ensures:
+- Each stage consumes validated input and produces valid output
+- No stage may modify upstream results
+- No stage may recompute prior transformations
+- All stage outputs must be deterministic
 
-- signal correctness  
-- causal traceability  
-- deterministic diagnostics  
-- preservation of evaluation grain  
+---
 
-These rules protect the integrity of the diagnostic system.
+## Production and Flow Rules
+
+- Production is computed at full capacity
+- Production is independent of input availability
+- Production must not be bottleneck-constrained
+- Consumption is globally aggregated via BOM
+- No routing or path-based allocation is allowed
+- All imbalance is resolved via clearing
+
+---
+
+## Clearing Rules
+
+- Clearing must resolve all imbalance
+- Allocation must be explicit
+- Allocation fractions must sum to 1
+- Channels distribute only (do not modify production)
+- Retail capacity is applied only in clearing/allocation layers
+
+---
+
+## Diagnostics Rules
+
+- Diagnostics must not modify engine outputs
+- Diagnostics must use only fact surfaces
+- Diagnostics must preserve evaluation grain
+- Diagnostics must not infer missing values
+
+---
+
+## Plan Health Rules
+
+- plan_health must operate only on abnormal rows
+- plan_health must not recompute production or balance
+- BL translation must use observed production only
+- No BL inference when production is missing
 
 ---
 
 ## Input Validation Invariants
 
-These invariants define correctness requirements for input tables.
+### Structural
 
-They are enforced during validation before pipeline execution.
-
-### Scenario Delta (scenario_delta)
-
-- Overrides must apply only to explicitly specified fields
-- All unspecified fields must retain their baseline values
-- Overrides must resolve to a valid state after application
+- All inputs must match contract schema
+- All keys must be valid
+- No duplicate key rows
 
 ---
 
-### Structural Constraints
+### Scenario Behavior
 
-- Each row represents a clearing intent at grain:
-  - snapshot_key × product_key × quality_level × sales_channel_key
-
-- Multiple rows per product are allowed
-
-- Duplicate rows with identical keys are not allowed
+- Overrides must apply only to explicit fields
+- Unspecified fields retain baseline values
+- Result must be valid after application
 
 ---
 
-### Temporal Normalization
+### Temporal
 
-- All allocation quantities must be stored in hourly units
+- All rates must be normalized to hourly units
+- Daily inputs must be converted before ingestion
 
-- User-facing daily inputs must be normalized prior to ingestion
+---
 
 ## No Routing
 
@@ -115,42 +141,64 @@ The system must not implement:
 - path-based allocation
 - priority-based consumption
 
-All consumption must be:
-
-- BOM-driven
+All flows must be:
 - aggregate
 - global
+- deterministic
 
-All imbalance must be resolved via clearing only.
+All imbalance is resolved via clearing.
 
 ---
 
 ## Contract Invariants
 
-The following invariants govern contract-driven behavior:
+### Structure
 
-### Structure Ownership
-- All table structure must be defined in contract files
-- Engine must not infer structure from data
-- Engine must not define schema internally
+- All structure defined in contracts
+- Engine must not infer schema
+- No schema in code
 
-### Validation Ownership
-- All structural validation rules must originate from contracts
-- Engine must not duplicate validation logic present in contracts
-- Required/non-empty semantics must be defined in contract metadata
+---
+
+### Validation
+
+- All validation rules defined in contracts
+- No duplication in engine
+- Required/non-empty defined in metadata
+
+---
 
 ### Discovery
-- All contract definitions must be dynamically discovered
-- Engine must not depend on fixed schema filenames
-- Adding new contract files must not require engine changes
+
+- Contracts dynamically loaded
+- No fixed filenames
+- Adding contracts requires no code change
+
+---
 
 ### Completeness
-- Contract definitions must be complete
-- All fields must have explicit types
-- All keys must reference valid fields
-- No partial or implicit schema definitions allowed
 
-### Separation of Concerns
-- Contracts define structure and validation
-- Engine executes transformations only
-- Tooling (UI) derives behavior from contracts, not code
+- All fields explicitly defined
+- All keys valid
+- No partial schemas
+
+---
+
+## Principles
+
+- Rules are never optional
+- Rules are enforced systemically
+- Rules are not decisions — they are invariants
+
+---
+
+## Summary
+
+These rules ensure:
+
+- deterministic execution
+- full traceability
+- schema-driven behavior
+- correct diagnostics
+
+They protect the integrity of the system.

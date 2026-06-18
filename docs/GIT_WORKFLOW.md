@@ -8,19 +8,17 @@ Ensures:
 - traceability
 - reproducibility
 - clean history
-- consistent evolution of the system
-
+- consistent system evolution
 
 ---
 
 ## Core Rules
 
 - All work is committed locally before pushing
-- Each commit represents a single logical change
+- Each commit represents one logical change
 - Commit messages must follow a consistent structure
 - History must remain readable and meaningful
 - Main branch must remain stable
-
 
 ---
 
@@ -28,38 +26,32 @@ Ensures:
 
 Commits follow this format:
 
-```
 <type>(<scope>): <summary>
-```
 
 Examples:
 
-```
-feat(engine): add throughput allocation logic
-fix(economics): correct cost attribution error
-docs(architecture): add L7 optimization layer
-```
-
+feat(engine): add throughput allocation logic  
+fix(economics): correct cost attribution error  
+docs(architecture): add L7 optimization layer  
 
 ---
 
 ## Commit Types
 
-| Type | Meaning |
-|------|--------|
-| feat | New capability or behavior |
-| fix | Bug fix or correction |
-| docs | Documentation change |
+| Type     | Meaning                                   |
+|----------|-------------------------------------------|
+| feat     | New capability or behavior                |
+| fix      | Bug fix or correction                     |
+| docs     | Documentation change                      |
 | refactor | Structural change without behavior change |
-| test | Test addition or modification |
-| chore | Non-functional change (setup, formatting, tooling) |
-
+| test     | Test addition or modification             |
+| chore    | Non-functional change                     |
 
 ---
 
 ## Commit Scope
 
-Scope identifies the affected area.
+Scope identifies the affected subsystem.
 
 Examples:
 
@@ -79,9 +71,8 @@ Examples:
 Rules:
 
 - Scope must align with system structure
-- Avoid vague scopes (e.g., "misc", "update")
-- Prefer domain-aligned terms (layer or subsystem names)
-
+- Avoid vague scopes (e.g. misc, update)
+- Prefer domain-aligned terms
 
 ---
 
@@ -99,7 +90,6 @@ Bad:
 
 fixed stuff  
 
-
 ---
 
 ## Commit Granularity
@@ -109,25 +99,23 @@ fixed stuff
 - Avoid large, bundled commits
 - Prefer small, traceable steps
 
-
 ---
 
 ## Branching Model
 
 - main → stable baseline
-- feature branches → all active work
+- feature branches → active work
 
 Naming examples:
 
-feature/throughput-allocation  
-fix/diagnostics-signal-bug  
+- feature/throughput-allocation  
+- fix/diagnostics-signal-bug  
 
 Rules:
 
 - Do not commit directly to main for non-trivial work
 - Merge only after validation
 - Keep branches short-lived
-
 
 ---
 
@@ -148,28 +136,25 @@ Requirements:
 - clear summaries
 - no ambiguous messages
 
-
 ---
 
 ## File Organization Rules
 
-- All code, data, and docs must live in repository
-- No hidden state outside repository
+- All code, data, and docs must live in the repository
+- No hidden state outside the repository
 - Generated outputs must not be manually edited
 - Source inputs must remain versioned
-
 
 ---
 
 ## Workflow Steps
 
-1. Clone repository
-2. Create branch
-3. Make changes
-4. Commit locally
-5. Push to remote
-6. Merge after validation
-
+1. Clone repository  
+2. Create branch  
+3. Make changes  
+4. Commit locally  
+5. Push to remote  
+6. Merge after validation  
 
 ---
 
@@ -178,7 +163,6 @@ Requirements:
 - Git history is not a scratchpad
 - Commits are not notes or journal entries
 - Repository is not used for experimentation logs
-
 
 ---
 

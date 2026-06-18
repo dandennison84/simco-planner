@@ -10,7 +10,6 @@ These rules ensure:
 - implementation independence
 - alignment with domain concepts
 
-
 ---
 
 ## Core Principles
@@ -18,17 +17,16 @@ These rules ensure:
 - All names must be implementation-agnostic
 - Names must describe meaning, not role or origin
 - Naming must be consistent across all layers
-- No tool- or language-specific conventions are allowed
+- No tool- or language-specific conventions
 
 Names must answer:
 “What is this thing?”
-
 
 ---
 
 ## Case Style
 
-- Use snake_case for all names
+- Use snake_case
 - Use lowercase only
 - Separate words with underscores
 
@@ -40,12 +38,11 @@ slot_product_assignment
 market_pricing  
 diagnostics  
 
-
 ---
 
 ## Naming Model
 
-### ✅ Domain-Based Naming
+### Domain-Based Naming
 
 Names must reflect domain meaning.
 
@@ -66,10 +63,9 @@ Incorrect:
 - tbl_diagnostics
 - q_signal_table
 
-
 ---
 
-### ✅ No Role-Based Prefixes
+### No Role-Based Prefixes
 
 Do not encode system role in names.
 
@@ -90,10 +86,9 @@ Role is defined by:
 
 NOT by name.
 
-
 ---
 
-### ✅ No Tool-Specific Naming
+### No Tool-Specific Naming
 
 Names must not reflect:
 
@@ -102,7 +97,7 @@ Names must not reflect:
 - SQL
 - Excel
 
-Examples to avoid:
+Avoid:
 
 - query_pricing
 - dataframe_sales
@@ -110,12 +105,11 @@ Examples to avoid:
 
 Names must remain valid across any implementation.
 
-
 ---
 
 ## Surface Naming
 
-### ✅ Input Surfaces
+### Input Surfaces
 
 Use domain nouns:
 
@@ -126,7 +120,7 @@ Use domain nouns:
 
 ---
 
-### ✅ Reference Surfaces
+### Reference Surfaces
 
 Use domain nouns:
 
@@ -136,7 +130,7 @@ Use domain nouns:
 
 ---
 
-### ✅ Output Surfaces
+### Output Surfaces
 
 Use semantic nouns:
 
@@ -146,22 +140,22 @@ Use semantic nouns:
 
 ---
 
-### ✅ Tool Views
+### Tool Views
 
-Only tool-specific views may include tool names:
+Tool-specific views may include tool name:
 
 - map_health_view
 
 These represent presentation only.
-
 
 ---
 
 ## Column Naming
 
 - Use snake_case
-- Use full words (no abbreviations unless standard)
-- Include units or meaning where necessary
+- Use full words
+- Avoid abbreviations unless standard (bom, id)
+- Include units where required
 
 Examples:
 
@@ -171,13 +165,11 @@ quality_level
 split_fraction  
 net_income_per_day  
 
-
 ---
 
 ## Key Naming
 
 Keys must:
-
 - be explicit
 - be consistent across surfaces
 - reflect grain
@@ -192,25 +184,28 @@ signal_code
 
 ---
 
-### Engine Stage Naming
+## Engine Stage Naming
 
-Stages must describe the transformation being performed.
+Stages must describe the transformation performed.
 
 Correct:
+
 - structure
 - production_resolution
 - product_bom_consumption
 - balance
 - clearing_allocation
 
-"Allocation" must only refer to distribution across channels, not production calculation.
+Rule:
+
+"allocation" refers only to distribution across channels, not production.
 
 ---
 
 ## Derived vs Base Naming
 
-- Base surfaces use noun names
-- Derived surfaces use semantic meaning, not process names
+- Base surfaces use nouns
+- Derived surfaces use semantic meaning
 
 Correct:
 
@@ -222,23 +217,21 @@ Incorrect:
 calculated_diagnostics  
 processed_guidance  
 
-
 ---
 
 ## Avoided Patterns
 
 Do not use:
 
-- abbreviations (unless standard: bom, id)
+- unnecessary abbreviations
 - implementation hints
-- redundant prefixes or suffixes
+- redundant prefixes/suffixes
 
-Examples to avoid:
+Avoid:
 
 data_table_sales  
 final_output_results  
 stg_structure_map  
-
 
 ---
 
@@ -246,11 +239,10 @@ stg_structure_map
 
 If a name becomes ambiguous:
 
-- rename it at the source
+- rename at the source
 - update all references
 
-Do not layer meaning onto poorly named artifacts.
-
+Do not layer meaning onto poor names.
 
 ---
 

@@ -1,45 +1,44 @@
 ## DATA CONTRACTS
 
 ### Purpose
+Define data contract surfaces for the SimCo Planner engine.
 
-Define the data contract surfaces for the SimCo Planner engine.
-
-This document describes:
+Describes:
 - input tables
 - reference tables
-- engine output tables
-- table grain
+- engine outputs
+- grain
 - invariants
 
-The contract definitions (contracts/*.yml) are the authoritative definition of structure, typing, and validation behavior.
+Contracts (`contracts/*.yml`) are authoritative for:
+- structure
+- typing
+- validation
 
-This document defines meaning, grain, and invariants only.
+This doc defines:
+- meaning
+- grain
+- invariants
 
-For contract structure:
 → see CONTRACT_SPEC.md
 
 ---
 
-# Contract Boundary
-
-The engine contract boundary is:
+# CONTRACT BOUNDARY
 
 data/runtime/input/*.csv  
 data/runtime/reference/*.csv  
 data/runtime/output/*.csv  
 
-### Rules
-
-- CSV is the only contract boundary
-- No implicit inputs or outputs
-- No hidden state
-- All outputs must be fully materialized
+Rules:
+- CSV only boundary
+- no implicit inputs/outputs
+- no hidden state
+- outputs fully materialized
 
 ---
 
-# Contract Model
-
-All table surfaces are defined through external contract files.
+# CONTRACT MODEL
 
 Contracts define:
 - structure
@@ -48,33 +47,58 @@ Contracts define:
 - constraints
 
 Rules:
-
-- Contracts are the single source of truth
-- Engine must not infer schema
-- All tables must exist in contracts before use
+- contracts are source of truth
+- engine does not infer schema
+- tables must exist in contracts
 
 ---
 
-# Contract Discovery
+# CONTRACT DISCOVERY
 
-Contracts are dynamically discovered from:
-
+Discovered dynamically from:
 - contracts/input
 - contracts/reference
 - contracts/output
 
 Rules:
+- no hardcoded tables
+- add tables without code changes
 
-- No hardcoded table definitions
-- Adding a contract does not require code changes
+---
+
+# PRODUCT GRAIN
+
+All product-derived tables use:
+
+(company_key, product_key, building_key, quality_level)
+
+Meaning:
+- building_key = producing building
+- row = product tied to specific building
+
+Rules:
+- building_key required
+- joins must include building_key
+- product identity = (company, product, building, quality)
+
+---
+
+# BUILDING SEMANTICS
+
+Producing building:
+- source of production
+- used in production_intent, balance_plan, etc.
+
+Retail building:
+- used for allocation
+- used in retail_plan, retail_allocation_result
+
+Rule:
+- do not mix producing vs retail buildings
 
 ---
 
 # INPUT TABLES
-
-User-controlled surfaces.
-
-### Tables
 
 - company
 - map_structure
@@ -88,34 +112,21 @@ User-controlled surfaces.
 
 ## retail_plan
 
-### Purpose
+Purpose:
+- defines retail building types and priority
 
-Defines which retail building types are used for each product and in what priority order.
+Behavior:
+- lower number = higher priority
+- defines building types
 
-### Grain
-
-company_key | product_key | quality_level | building_key
-
-### Behavior
-
-- Lower priority number executes first
-- Defines building *types*, not specific instances
-- Drives downstream retail allocation
-
-### Invariants
-
-- Must exist for any product routed to Retail
-- Priorities must be unique per (company, product, quality)
-- building_key must exist on the map
-- building_key must be valid for product
+Invariants:
+- required for retail products
+- priority unique per (company, product, quality)
+- building_key must be valid
 
 ---
 
 # REFERENCE TABLES
-
-System-controlled domain surfaces.
-
-### Tables
 
 - building
 - building_category
@@ -138,43 +149,42 @@ System-controlled domain surfaces.
 
 # ENGINE OUTPUT TABLES
 
-Resolved, deterministic fact tables.
-
 ---
 
 ## production_intent
 
 Grain:
-company_key | product_key | quality_level
+(company, product, building, quality)
 
 Fields:
 - units_produced_per_hour
 
 Invariants:
 - ≥ 0
-- Full capacity only
+- full capacity
+- abundance applied upstream
 
 ---
 
 ## product_bom_consumption
 
 Grain:
-company_key | product_key | quality_level
+(company, product, building, quality)
 
 Fields:
 - units_consumed_per_hour
 
 Invariants:
 - ≥ 0
-- BOM-derived only
-- No routing
+- BOM-driven
+- no routing
 
 ---
 
 ## balance_plan
 
 Grain:
-company_key | product_key | quality_level
+(company, product, building, quality)
 
 Fields:
 - units_produced_per_hour
@@ -190,30 +200,43 @@ Invariants:
 
 ---
 
+## constraint_type
+
+Grain:
+(company, product, building, quality)
+
+Values:
+- retail_constrained
+- supply_constrained
+- not_constrained
+
+Meaning:
+- retail_constrained → retail cap
+- supply_constrained → net < 0
+- not_constrained → no issue
+
+---
+
 ## clearing_result
 
 Grain:
-company_key | product_key | quality_level | priority | channel_key
-
-Meaning:
-Product-level routing across channels.
+(company, product, quality, priority, channel)
 
 Fields:
 - direction
 - allocated_units_per_hour
 
 Invariants:
-- allocated ≥ 0
-- Sequential by priority
-- Uses remaining quantity
-- Retail is capped here, not distributed
+- ≥ 0
+- sequential by priority
+- retail capped here
 
 ---
 
 ## allocation_summary
 
 Grain:
-company_key | product_key | quality_level
+(company, product, quality)
 
 Fields:
 - total_units_per_hour
@@ -221,63 +244,95 @@ Fields:
 - non_retail_units_per_hour
 - is_retail_capped
 
-Invariants:
-- retail + non_retail = total
+Invariant:
+- total = retail + non_retail
 
 ---
 
 ## retail_allocation_result
 
 Grain:
-company_key | product_key | quality_level | building_key | priority
-
-Meaning:
-Building-level allocation of Retail channel output.
+(company, product, quality, building, priority)
 
 Fields:
 - allocated_units_per_hour
 
-Behavior:
-- Distributes cleared retail demand
-- Uses retail_plan priority cascade
-- Applies building capacity constraints
-
 Invariants:
-- allocated ≥ 0
-- Sum(building allocations) = clearing_result retail
-- No over-allocation
-- Honors priority order
+- ≥ 0
+- sums to retail allocation
+- no over-allocation
+- respects priority
+
+---
+
+# VIEW: PLAN HEALTH
+
+## view_plan_health
+
+Purpose:
+Operational diagnostics per product.
+
+Grain:
+(company, product, quality)
+
+Behavior:
+- only rows where constraint_type ≠ not_constrained
+
+Outputs:
+- required_action
+- action_target
+- required_change_per_day
+- required_change_pct
+- required_bl_change
+
+---
+
+## ACTION TRANSLATION
+
+Retail:
+required_bl_change =
+retail_shortfall ÷ retail_capacity_per_BL
+
+Supply (existing):
+required_bl_change =
+shortage ÷ (units_produced_per_hour / total_BL)
+
+Supply (no production):
+required_bl_change = null
+
+Meaning:
+- production not running
+- BL cannot be inferred
 
 ---
 
 # SYSTEM INVARIANTS
 
-## Production
+Production:
 - ≥ 0
-- Full capacity only
+- full capacity
 
-## Consumption
-- Strictly BOM-driven
+Consumption:
+- BOM only
 
-## Balance
+Balance:
 - net = produced − consumed
 
-## Clearing
-- allocated + remainder = abs(net)
-- Sequential by priority
+Clearing:
+- sequential
+- retail capped
 
-## Retail Allocation
-- Operates only on Retail channel
-- Distributes — does not calculate demand
-- Fully reconciles to clearing_result
+Retail allocation:
+- distribution only
+- reconciles to clearing_result
 
-## Determinism
-- Same inputs → same outputs
+Determinism:
+- same input → same output
 
-## Contract Enforcement
-- No missing fields
-- No extra fields
-- No implicit behavior
+Contract:
+- no missing fields
+- no extra fields
+- no implicit logic
 
 ---
 
@@ -289,20 +344,21 @@ INPUT
 → PRODUCTION_RESOLUTION  
 → BOM_CONSUMPTION  
 → BALANCE  
-→ CLEARING (product-level routing + retail capacity cap)  
-→ RETAIL_ALLOCATION (building-level distribution)  
+→ CLEARING  
+→ RETAIL_ALLOCATION  
 → OUTPUT  
 
 ---
 
 # SUMMARY
 
-The engine produces:
+Engine produces:
+- product-level flows → clearing_result
+- building-level retail flows → retail_allocation_result
 
-- product-level flows (clearing_result)
-- building-level retail flows (retail_allocation_result)
+All downstream logic:
+- consumes outputs only
+- does not recompute upstream
 
-All downstream logic must build on these outputs.
-
-Contracts define all structure.  
-The engine executes strictly against contracts.
+Contracts define structure.
+Engine executes against contracts.

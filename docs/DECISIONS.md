@@ -4,22 +4,22 @@ This file captures major architectural and development decisions.
 
 Rules:
 - One row per decision
-- Append-only for *meaning* (do not delete prior decisions)
-- If a decision is no longer active, mark it **❌ Superseded** and fill **ReplacedBy**
-- Any new decision that replaces an old one must fill **Supersedes**
+- Append-only for meaning (do not delete prior decisions)
+- If a decision is no longer active, mark as ❌ Superseded and fill ReplacedBy
+- Replacement decisions must fill Supersedes
 - Keep statements short and implementation-agnostic
 
 ---
 
 ## Lifecycle Legend
 
-Status values (use emojis for scanability):
+Status values:
 - ✅ Active — current authoritative decision
-- ❌ Superseded — no longer in force (retained for history)
+- ❌ Superseded — no longer in force
 - ⚠️ Partial — transitional / partially enforced
 
-Markdown strikethrough (optional for the *Decision* cell when superseded):
-- `~~text~~`
+Optional:
+- Use ~~strikethrough~~ on superseded decisions
 
 ---
 
@@ -27,31 +27,31 @@ Markdown strikethrough (optional for the *Decision* cell when superseded):
 
 | # | Status | Supersedes | ReplacedBy | Topic | Problem | Key Points | Decision |
 |---:|:---:|:---|:---|---|---|---|---|
-| 1 | ✅ |  |  | Dev Environment | Excel/M is slow and untestable | No standalone execution, no testing, UI-coupled | Core logic must run outside Excel |
-| 2 | ✅ |  |  | Runtime | Need expressive, testable execution system | Must support modular pipelines and deterministic transforms | Use a general-purpose runtime for engine execution |
-| 3 | ✅ |  |  | Editor | Need productive development interface | Must support coding, debugging, and integration | Use a modern code editor |
-| 4 | ✅ |  |  | Version Control | Need change tracking and rollback | Required for safe iteration and traceability | Use version control system |
-| 5 | ✅ |  |  | Repository | Need persistent system state | Must store code, docs, and tests | Use centralized repository as source of truth |
-| 6 | ✅ |  |  | Environment Isolation | Need reproducible dependencies | Avoid version conflicts | Use isolated project environments |
-| 7 | ✅ |  |  | Project Structure | Need maintainable organization | Separate engine, data, tests, docs | Use structured repository layout |
-| 8 | ✅ |  |  | Testing Framework | Need automated validation | Must support structured and repeatable tests | Use a programmable testing framework |
-| 9 | ✅ |  |  | Test Strategy | Need scalable rule validation | Tables match domain logic | Use table-driven testing |
-| 10 | ✅ |  |  | Test Data | Need clean test definition | Separate logic from data | Store test cases as tables |
-| 11 | ✅ |  |  | Execution Model | Need repeatable runs | Avoid UI-triggered execution | Run engine as standalone process |
-| 12 | ✅ |  |  | Data Contract | Need stable interface | Inputs/outputs must be inspectable | Use flat files as contract boundary |
-| 13 | ✅ |  |  | Debugging | Need traceable behavior | Inspectable state preferred | Debug via data inspection |
-| 14 | ✅ |  |  | Automation | Need regression safety | Standard software practice | Design for automated testing workflows |
-| 15 | ✅ |  |  | Coding Style | Need data transformations and side effect avoidance | Standard software practice | Use FP when possible except where it overcomplicates |
-| 16 | ✅ |  |  | Assignment Completeness | Partial assignment leads to silent capacity loss | All slots must be explicitly allocated | All economic slots must have explicit assignment rows |
-| 17 | ✅ |  |  | No Fallback Behavior | Implicit defaults hide user intent errors | Deterministic systems require explicit inputs | No fallback or inferred allocation behavior is allowed |
-| 18 | ✅ |  |  | Assignment Canonical Source | Assignment could originate from multiple surfaces | Must enforce a single authoritative source | Assignment must originate from a single canonical input surface |
-| 19 | ✅ |  |  | Assignment Grain Definition | Assignment identity unclear across dimensions | Requires full identity including quality level | Assignment is uniquely defined by slot × product × quality level |
-| 20 | ✅ |  |  | Split Integrity | Allocation fractions could drift or misalign | Must preserve total capacity | Split fractions must sum exactly to 1 per slot |
-| 21 | ✅ |  |  | Input Validation Discipline | Invalid data could propagate silently | Engine must fail early and clearly | All invalid, incomplete, or malformed inputs must fail validation |
-| 22 | ✅ |  |  | No Silent Data Correction | Systems may auto-correct bad inputs | Hidden correction causes trust issues | Invalid inputs must not be corrected, only rejected |
-| 23 | ✅ |  |  | Throughput Resolution Rule | Multiple passes could distort quantities | Flow must resolve once deterministically | Throughput must be resolved once and never recomputed or redistributed |
-| 24 | ✅ |  |  | Channel Projection Constraint | Channel logic could distort base quantities | Channel is projection, not production | Channels must only distribute resolved throughput, never create or alter it |
-| 25 | ✅ |  |  | Stock vs Flow Boundary Enforcement | Structural metrics risk contaminating flow logic | Layer boundaries must remain strict | Structural/stock values must never be used as inputs into throughput or modeled economics |
+| 1 | ✅ | | | Dev Environment | Excel/M is slow and untestable | No standalone execution | Core logic must run outside Excel |
+| 2 | ✅ | | | Runtime | Need expressive system | Deterministic pipeline required | Use general-purpose runtime |
+| 3 | ✅ | | | Editor | Need dev interface | Must support debugging | Use modern code editor |
+| 4 | ✅ | | | Version Control | Need traceability | Safe iteration required | Use VCS |
+| 5 | ✅ | | | Repository | Need persistence | Store code + docs | Central repo is source of truth |
+| 6 | ✅ | | | Environment Isolation | Dependency conflicts | Reproducibility required | Use isolated environments |
+| 7 | ✅ | | | Project Structure | Maintainability | Separate concerns | Structured repo layout |
+| 8 | ✅ | | | Testing Framework | Need validation | Repeatable testing | Use programmable framework |
+| 9 | ✅ | | | Test Strategy | Rules are tabular | Scale validation | Use table-driven tests |
+| 10 | ✅ | | | Test Data | Logic/data separation | Clean test inputs | Store tests as tables |
+| 11 | ✅ | | | Execution Model | Avoid UI coupling | Deterministic runs | Engine runs standalone |
+| 12 | ✅ | | | Data Contract | Stable interface needed | Inspectability | Use CSV contract boundary |
+| 13 | ✅ | | | Debugging | Need traceability | Inspect state directly | Debug via data inspection |
+| 14 | ✅ | | | Automation | Regression safety | Standard practice | Enable automated workflows |
+| 15 | ✅ | | | Coding Style | Side-effects risk | Predictability | Prefer FP where reasonable |
+| 16 | ✅ | | | Assignment Completeness | Partial assignment loss | Capacity integrity | All slots must be assigned |
+| 17 | ✅ | | | No Fallback | Hidden defaults | Non-deterministic | No inferred behavior |
+| 18 | ✅ | | | Assignment Source | Multiple sources | Ambiguity | Single canonical input |
+| 19 | ✅ | | | Assignment Grain | Identity ambiguity | Needs full precision | slot × product × quality |
+| 20 | ✅ | | | Split Integrity | Fraction drift | Capacity loss | Splits must equal 1 |
+| 21 | ✅ | | | Input Validation | Silent errors | Fail fast | Invalid input must fail |
+| 22 | ✅ | | | Input Correction | Hidden fixes | Trust issues | No auto-correction |
+| 23 | ✅ | | | Throughput | Multi-pass distortion | Determinism required | Resolve once |
+| 24 | ✅ | | | Channels | Output mutation risk | Misleading outputs | Channels distribute only |
+| 25 | ✅ | | | Stock vs Flow | Cross-contamination | Layer integrity | No stock → flow usage |
 
 ---
 
@@ -59,46 +59,42 @@ Markdown strikethrough (optional for the *Decision* cell when superseded):
 
 | # | Status | Supersedes | ReplacedBy | Topic | Problem | Key Points | Decision |
 |---:|:---:|:---|:---|---|---|---|---|
-| 01 | ✅ |  |  | Engine Ownership | Logic spread across layers | Hard to maintain and verify | Single engine owns all logic |
-| 02 | ✅ |  |  | Integration Layer | UI layer overloaded with logic | Weak for testing and iteration | Integration layer is thin only |
-| 03 | ✅ |  |  | System Boundary | Need clear separation | Prevent cross-layer contamination | Use explicit data contract boundary |
-| 04 | ✅ |  |  | Data Flow | Need deterministic pipeline | Transformation must be explicit | Pipeline is staged and directional |
-| 05 | ✅ |  |  | Testing Level | Unit tests insufficient | Need system-level validation | Add acceptance testing layer |
-| 06 | ✅ |  |  | Test Model | Rules are table-based | Align with domain thinking | Use table-driven acceptance tests |
-| 07 | ✅ |  |  | Layer Model | Existing model is strong | Already enforces correctness | Keep full layer model |
-| 08 | ✅ |  |  | Documentation Role | Docs tied to implementation | Limits flexibility | Docs define invariants only |
-| 09 | ✅ |  |  | Implementation Independence | Language coupling limits portability | System should outlive tooling | Remove implementation-specific language |
-| 10 | ✅ |  |  | Runtime Isolation | Test data interfered with runtime behavior | Needed separation without changing engine logic | Separate runtime and test data directories |
-| 11 | ✅ |  |  | CSV Contract Boundary | Considered reading Excel directly | Engine must remain deterministic and UI-independent | CSV is the sole contract boundary |
-| 12 | ✅ |  |  | Validator Layer | No clear data validation boundary | Pipeline must remain pure logic | Add schema-driven validator before pipeline |
-| 13 | ✅ |  |  | Schema Ownership | Unclear whether user or system defines structure | User experience must remain simple | Schema owned by system, not input tables |
-| 14 | ✅ |  |  | Schema Versioning | Considered embedding version in CSV data | Would complicate user input and pollute tables | Versioning exists only in schema, not CSV |
-| 15 | ✅ |  |  | Observability | Engine execution was silent | No signal of data consumption | Always emit table-level run summaries |
-| 16 | ✅ |  |  | Schema Scope | Considered schema defining table presence | Schema not yet mature | Keep table surfaces defined in engine for now |
-| 17 | ✅ |  |  | User Responsibility | Users potentially managing system metadata | Creates unnecessary complexity | Users only provide business data, no system fields |
-| 18 | ✅ |  |  | Slot State Semantics | Slot states previously ignored in logic | Only certain states contribute to production | Only capacity-contributing slot states participate in production |
-| 19 | ✅ |  |  | Automation Semantics | Automation behavior unclear in model | Must match game mechanics | Automation affects costs only, not throughput |
-| 20 | ✅ |  |  | Production Symmetry | Production modifiers potentially distort economics | Must maintain balanced effect | Production modifiers apply symmetrically to output and labor |
-| 21 | ✅ |  |  | Economics Primitives | Revenue used inconsistently | Profit and cost must be consistent base | Profit and cost are primitives; revenue is derived only |
-| 22 | ✅ |  |  | Stock vs Flow Separation | Structural values risk contaminating flow logic | Must maintain layer integrity | Stock/structure values must not be used in throughput or economics |
-| 23 | ✅ |  |  | Assignment Driven Throughput | Structure previously used for capacity directly | Assignment defines production | Throughput must be driven exclusively by assignment surfaces |
-| 24 | ✅ |  |  | Generator Discipline | Row expansion logic implicit | Expansion must be controlled | Any component increasing rows must explicitly declare schema and expansion cause |
-| 25 | ✅ |  |  | Scenario Model | Scenario logic embedded in tool-specific inputs | Need reusable, tool-independent state derivation | Scenarios are defined as baseline snapshot plus scenario_delta applied as partial updates |
-| 26 | ✅ |  |  | Execution Identity | Snapshot and scenario identities conflict during execution | Pipeline must remain simple and deterministic | Engine generates a unique state_key for execution and does not rely on snapshot_key or scenario_key internally |
-| 27 | ❌ |  | 30 | ~~Flow Policy Layer~~ | Internal resource routing not explicitly modeled | Flow behavior must be separated | ~~Introduce a flow policy stage~~ |
-| 28 | ❌ |  | 30 | ~~Sales Strategy Model~~ | Demand-based models created implicit behavior | Required explicit table-driven behavior | ~~Replace sales_demand with sales_strategy~~ |
-| 29 | ❌ |  | 30 | ~~Flow vs Sales Strategy Separation~~ | Internal vs external allocation modeled separately | Separation introduced duplicated logic | ~~Maintain separation of flow_policy and sales_strategy~~ |
-| 30 | ✅ | 27,28,29 |  | Consumption and Clearing Model | Flow and sales allocation models introduced routing and priority complexity | BOM fully determines consumption; market resolves imbalance; routing not required | Replace flow_policy and sales_strategy with production → BOM consumption → balance → clearing |
-| 31 | ❌ | | | ~~Production Model~~ | ~~Ambiguity between full-capacity and bottleneck-constrained production created uncertainty in pipeline behavior and clearing logic~~ | ~~Must preserve deterministic staged pipeline; avoid routing or dependency-based constraint solving; align with clearing-based imbalance resolution~~ | ~~Production is computed at full capacity independent of input availability. All shortages are resolved via the clearing layer. Production is not constrained by input bottlenecks. Production quantities may be adjusted via run normalization to ensure integer BOM consumption without reducing capacity-driven output.~~ |
-| 32 | ✅ | | | Validation Architecture | Structural validation was interleaved with stage logic, leading to duplicated checks and unclear guarantees about data integrity throughout the pipeline | Must ensure deterministic execution and eliminate redundant validation while enabling strong stage contracts | All structural validation (schema, typing, required tables, key constraints) must be performed once before pipeline execution. Downstream stages may assume structurally valid and typed data. Behavioral correctness is enforced via stage-level invariants. |
-| 33 | ✅ | 31 | | Production Model | Run normalization introduced non-game-realistic behavior and distorted planner outputs | Continuous production better reflects player decision making and avoids artificial truncation | Production is computed at full capacity as a continuous rate. BOM consumption is computed as continuous fractional usage. No integer run normalization or global rounding is applied. |
-| 34 | ✅ | 16 |  | Schema Scope | Schema previously not authoritative for table presence | Needs full contract-driven extensibility | Schema defines all table surfaces and structure |
-| 35 | ✅ |  |  | Contract Architecture | YAML used as grouped schema files | Limits extensibility and composability | Use contract-driven architecture with external contract files as system boundary |
-| 36 | ✅ |  |  | Validation Ownership | Required table logic partially hardcoded in engine | Creates duplication and inconsistency | All structural validation rules must be defined in contracts, not code |
-| 37 | ✅ |  |  | Contract Discovery | Schema files loaded via fixed paths | Prevents adding new contracts without code changes | Engine must dynamically discover contracts from filesystem |
-| 38 | ✅ |  |  | UI Lookup Definition | Lookup mappings defined in both YAML and code | Causes duplication and drift | UI lookup behavior must be fully contract-driven |
-| 39 | ✅ |  |  | Contract Typing | Contract type inferred implicitly | Causes parsing ambiguity | All contracts must explicitly declare `kind` |
-| 40 | ✅ | 16 |  | Contract-Driven Architecture | Engine structure, validation, and table presence were partially defined in code, creating duplication and drift between schema and runtime behavior | Structure and validation must be centralized, explicit, and fully externalized to support extensibility without code changes | Adopt a contract-driven architecture where all table structure, typing, validation behavior, and table presence are defined in external contract files; engine dynamically discovers and executes against contracts and must not define or infer schema internally |
+| 01 | ✅ | | | Engine Ownership | Logic fragmentation | Hard to verify | Single engine owns logic |
+| 02 | ✅ | | | Integration | UI logic leakage | Hard to test | Thin integration layer |
+| 03 | ✅ | | | Boundary | Layer contamination | Need separation | Explicit contract boundary |
+| 04 | ✅ | | | Data Flow | Non-deterministic behavior | Implicit transforms | Staged pipeline |
+| 05 | ✅ | | | Testing Level | Unit tests insufficient | System behavior matters | Acceptance testing |
+| 06 | ✅ | | | Test Model | Domain is tabular | Alignment needed | Table-driven tests |
+| 07 | ✅ | | | Layer Model | Already strong | Enforces correctness | Keep layered architecture |
+| 08 | ✅ | | | Documentation | Coupled to code | Limits flexibility | Docs define invariants only |
+| 09 | ✅ | | | Independence | Language coupling | Reduces portability | Remove implementation bias |
+| 10 | ✅ | | | Runtime Isolation | Data contamination | Test vs runtime conflict | Separate directories |
+| 11 | ✅ | | | CSV Boundary | Excel dependency risk | Determinism required | CSV-only boundary |
+| 12 | ✅ | | | Validator Layer | Mixed validation | Duplicate logic | Schema-driven validator |
+| 13 | ✅ | | | Schema Ownership | User vs system ambiguity | UX complexity | Schema owned by system |
+| 14 | ✅ | | | Schema Versioning | Data-level versioning risk | Input complexity | Versioning in schema only |
+| 15 | ✅ | | | Observability | Silent execution | No insight | Emit summaries |
+| 16 | ✅ | | 34 | Schema Scope | Structure partly in code | Not scalable | Move to contracts |
+| 17 | ✅ | | | User Responsibility | Users handling metadata | Complexity | Users provide only business data |
+| 18 | ✅ | | | Slot Semantics | State ignored | Incorrect production | Only active slots used |
+| 19 | ✅ | | | Automation | Misinterpreted effect | Gameplay mismatch | Affects cost only |
+| 20 | ✅ | | | Production Symmetry | Distorted economics | Imbalance risk | Apply symmetrically |
+| 21 | ✅ | | | Economics Model | Revenue misuse | Inconsistent base | Profit/cost are primitives |
+| 22 | ✅ | | | Stock vs Flow | Contamination risk | Layer violation | Strict separation |
+| 23 | ✅ | | | Throughput Driver | Structure used incorrectly | Logic mismatch | Assignment drives production |
+| 24 | ✅ | | | Generator Discipline | Hidden row expansion | Traceability loss | Explicit expansion rules |
+| 25 | ✅ | | | Scenario Model | Hardcoded scenarios | Lack of reuse | Use delta overlays |
+| 26 | ✅ | | | Execution Identity | ID collisions | Complexity | Engine-generated key |
+| 30 | ✅ | 27,28,29 | | Clearing Model | Routing complexity | Overly complex | Replace with production → BOM → balance → clearing |
+| 32 | ✅ | | | Validation Architecture | Mixed validation | Inconsistency | Validate once pre-pipeline |
+| 33 | ✅ | 31 | | Production Model | Rounding distortion | Unrealistic output | Continuous production only |
+| 34 | ✅ | 16 | | Schema Scope | Not fully contract-driven | Limited extensibility | Contracts define surfaces |
+| 35 | ✅ | | | Contract Architecture | YAML grouping limits flexibility | Inflexible | Fully contract-driven system |
+| 36 | ✅ | | | Validation Ownership | Logic duplicated | Drift risk | Contracts define validation |
+| 37 | ✅ | | | Contract Discovery | Fixed paths | Not scalable | Dynamic discovery |
+| 38 | ✅ | | | UI Lookup | Dual definitions | Drift | Contract-driven lookups |
+| 39 | ✅ | | | Contract Typing | Implicit typing | Parse ambiguity | Explicit kind required |
+| 40 | ✅ | 16 | | Contract System | Mixed structure ownership | Drift and duplication | Contracts define all structure |
 
 ---
 
@@ -106,31 +102,30 @@ Markdown strikethrough (optional for the *Decision* cell when superseded):
 
 | # | Status | Supersedes | ReplacedBy | Topic | Problem | Key Points | Decision |
 |---:|:---:|:---|:---|---|---|---|---|
-| 01 | ✅ |  |  | Source of Truth | Conversations are not persistent | Risk of drift | Repository docs are authoritative |
-| 02 | ✅ |  |  | Decision Tracking | Decisions get lost | Need continuity | Maintain decisions log |
-| 03 | ✅ |  |  | Execution Independence | System tied to tooling | Limits evolution | Define system independent of runtime |
-| 04 | ✅ |  |  | Diagnostics Integrity | Diagnostics could modify results | Must remain observational only | Diagnostics must not alter modeled or observed results |
-| 05 | ✅ |  |  | Guidance Boundaries | Guidance could become prescriptive | Preserve user agency | Guidance must not prescribe actions or optimize decisions |
-| 06 | ✅ |  |  | Policy Location | Thresholds risk being embedded in logic | Must be auditable and modular | All thresholds and policies must be table-driven |
-| 07 | ✅ |  |  | Authority Separation | Ref and system logic can blur | Must maintain clarity of truth vs interpretation | Ref = world truth; Sys = engine interpretation |
-| 08 | ✅ |  |  | Documentation Audience | Documentation mixing audiences | Engine docs should not explain player-facing output | Docs must only define engine invariants and intent, not player explanations |
-| 09 | ✅ |  |  | Player Explanation Boundary | Player explanation appears in engine docs | Must separate internal vs external language | Player-facing explanations must exist only in Help or Tool layers |
-| 10 | ✅ |  |  | Documentation Stability | Docs drift over time with ad hoc updates | Must preserve authority and traceability | Engine documentation is stable and only changes via controlled refactors |
-| 11 | ✅ |  |  | Documentation Discipline | System accumulates unnecessary ideas and notes | Not all information should be captured | Information that does not clearly belong in a system layer must not be documented |
+| 01 | ✅ | | | Source of Truth | Conversations lost | Drift risk | Repo docs authoritative |
+| 02 | ✅ | | | Decision Tracking | Decisions lost | Continuity needed | Maintain log |
+| 03 | ✅ | | | Independence | Tool coupling | Limits evolution | Define system independent |
+| 04 | ✅ | | | Diagnostics | Mutation risk | Must remain read-only | Diagnostics observational only |
+| 05 | ✅ | | | Guidance | Prescriptive outputs | User loss of control | Guidance not prescriptive |
+| 06 | ✅ | | | Policy Location | Logic embedding risk | Not auditable | Policies table-driven |
+| 07 | ✅ | | | Authority | Truth vs logic mixing | Ambiguity | Ref = truth, Sys = interpretation |
+| 08 | ✅ | | | Docs Audience | Mixed audiences | Confusion | Engine docs = internal only |
+| 09 | ✅ | | | Player Explanation | Leakage into engine docs | Misuse | Move to help layer |
+| 10 | ✅ | | | Documentation Stability | Drift risk | Loss of authority | Controlled updates only |
+| 11 | ✅ | | | Documentation Discipline | Over-documentation | Noise | Only document system-layer info |
 
 ---
 
-## Lifecycle Rules (Operational)
+## Lifecycle Rules
 
-When introducing a replacement decision:
-- Add a new row with **Status = ✅ Active** and fill **Supersedes** with the prior decision id(s)
-- Update the prior row to **Status = ❌ Superseded** and fill **ReplacedBy** with the new decision id
-- Optional: wrap the old Decision text in `~~ ~~` for quick visual scanning
+When replacing a decision:
+- New row → Status = ✅ Active, fill Supersedes
+- Old row → Status = ❌ Superseded, fill ReplacedBy
 
-Examples:
-- Supersedes: `04`  
-- ReplacedBy: `18`
+Example:
+- Supersedes: 04
+- ReplacedBy: 18
 
-Notes:
-- Superseding should be used only when the older decision is no longer correct or has been materially replaced.
-- Clarifications that do not change meaning should be captured as **Notes** in the new row (not as superseding).
+Rules:
+- Use superseding only for real replacement
+- Minor clarification → do NOT supersede
