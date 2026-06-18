@@ -139,6 +139,7 @@ T-104 | Add retail_priority_path output | engine | ⏳ Pending | Surface retail_
 T-105 | Add constraint_type output | engine | ⏳ Pending | Classify constraint driver per product (retail_constrained, supply_constrained, not_constrained) using allocation_summary and balance_plan
 | T-109 | Design user-facing summary sheet (Map Health dashboard) | UI / Excel | ⏳ Pending | Create a consolidated summary view showing only actionable, non-normal conditions with combined signals (flow, role, constraint, allocation) and ratios expressed in daily units to guide building adjustments |
 | T-118 | Fix input reader to exclude disabled rows | engine | ⏳ Pending | Update input ingestion pipeline to ignore rows where enabled=false so they are not written to data/runtime/input/*.csv files, ensuring runtime data matches active user configuration |
+| T-119 | Add abundance mechanics for extractive buildings | engine | ⏳ Pending | Implement abundance-based modifiers for mines, quarries, and oil rigs that adjust production output and wage costs by product based on resource richness, integrating into production and cost calculations |
 
 ---
 
