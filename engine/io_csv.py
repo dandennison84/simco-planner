@@ -107,7 +107,15 @@ def _load_contract_tables(
             out[table_name] = []
             continue
 
-        rows = _read_csv_rows(csv_path)
+        rows_raw = _read_csv_rows(csv_path)
+
+        contract = contracts[table_name]
+        allowed_cols = set(contract.fields.keys())
+
+        rows = [
+            {k: v for k, v in row.items() if k in allowed_cols}
+            for row in rows_raw
+        ]
 
         # ✅ Level 2: row count
         if debug_state and debug_enabled(debug_state, 2):

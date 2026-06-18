@@ -15,7 +15,20 @@ Rules:
 
 | ID | Task | Layer | Status | Notes |
 |----|------|------|--------|------|
-| T-109 | Design user-facing summary sheet (Map Health dashboard) | UI / Excel | ⏳ Pending | Create a consolidated summary view showing only actionable, non-normal conditions with combined signals (flow, role, constraint, allocation) and ratios expressed in daily units to guide building adjustments |
+| T-117 | Align documentation with building_key propagation and plan_health output | docs | ⏳ Pending | Update all product-grain table schemas to include building_key, revise constraint_type terminology (not_constrained), and add formal documentation for view_plan_health including BL translation rules and building semantics |
+| T-110 | Add product_cost_basis output | engine | ⏳ Pending | Compute per-unit direct production cost for each product using input BOM consumption and reference prices (no revenue yet) |
+
+| T-111 | Add product_cost_rollup output | engine | ⏳ Pending | Compute full per-unit cost including recursive input chains (Raw → Final) to produce true marginal cost per product |
+
+| T-112 | Add product_revenue model | engine | ⏳ Pending | Compute per-unit revenue using retail prices, exchange/contract prices, and override tables (retail prioritized over exchange) |
+
+| T-113 | Add product_profitability output | engine | ⏳ Pending | Compute profit per unit, profit per hour/day, and margin_pct using cost and revenue outputs |
+
+| T-114 | Add view_plan_economics | UI / Power Query | ⏳ Pending | Create user-facing summary combining profitability metrics with product identity (no operational diagnostics) |
+
+| T-115 | Add profit_allocation_summary output | engine | ⏳ Pending | Summarize profit split between retail and non-retail channels to align economic behavior with allocation outputs |
+
+| T-116 | Add economic_action_signals (optional) | engine | ⏳ Pending | Classify products as expand, reduce, or neutral based on profitability and capacity utilization |
 
 ---
 
@@ -124,6 +137,8 @@ T-102 | Add retail_unused_capacity output | engine | ⏳ Pending | Compute unuse
 | T-103 | Add allocation ratios to allocation_summary (M layer) | UI / Power Query | ⏳ Pending | Compute retail_pct and non_retail_pct in view layer from allocation_summary (no engine stage) |
 T-104 | Add retail_priority_path output | engine | ⏳ Pending | Surface retail_plan priority ordering per product for debugging allocation cascade
 T-105 | Add constraint_type output | engine | ⏳ Pending | Classify constraint driver per product (retail_constrained, supply_constrained, not_constrained) using allocation_summary and balance_plan
+| T-109 | Design user-facing summary sheet (Map Health dashboard) | UI / Excel | ⏳ Pending | Create a consolidated summary view showing only actionable, non-normal conditions with combined signals (flow, role, constraint, allocation) and ratios expressed in daily units to guide building adjustments |
+| T-118 | Fix input reader to exclude disabled rows | engine | ⏳ Pending | Update input ingestion pipeline to ignore rows where enabled=false so they are not written to data/runtime/input/*.csv files, ensuring runtime data matches active user configuration |
 
 ---
 
